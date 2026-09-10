@@ -55,4 +55,12 @@ describe('ProductCard', () => {
 
     expect(wrapper.find('.product-card__quantity-value').text()).toBe('1')
   })
+  
+  it('decreases the quantity when above 1', async () => {
+  const wrapper = mount(ProductCard, { props: { product } })
+  await wrapper.find('[aria-label="Aumentar cantidad"]').trigger('click')
+  await wrapper.find('[aria-label="Reducir cantidad"]').trigger('click')
+
+  expect(wrapper.find('.product-card__quantity-value').text()).toBe('1')
+})
 })

@@ -62,4 +62,17 @@ describe("CartaView", () => {
       "No hay productos disponibles en esta categoría",
     );
   });
+
+  it('calls the add-to-cart handler when a product card emits the event', async () => {
+  vi.spyOn(productsService, 'getProducts').mockResolvedValue([
+    { id: 1, name: 'Sushi test', category: 'SUSHI', price: 1, description: '', imageUrl: '' },
+  ])
+  const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+  const wrapper = mount(CartaView)
+  await flushPromises()
+  await wrapper.find('.product-card__add-btn').trigger('click')
+
+  expect(consoleSpy).toHaveBeenCalled()
+})
 });
