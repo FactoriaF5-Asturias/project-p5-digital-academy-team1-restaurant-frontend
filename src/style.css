@@ -17,6 +17,24 @@
   --font-sans: var(--sans);
   --font-heading: var(--heading);
   --font-mono: var(--mono);
+  
+  --color-on-surface: #18181b;
+  --color-on-surface-variant: #52525b;
+  --color-surface: #ffffff;
+  --color-surface-variant: #f0f0f0;
+  --color-surface-container-high: #f4f4f5;
+  --color-surface-container-highest: #e4e4e7;
+  --color-background: #d3d3d3;
+  --color-primary: #d6381d;
+  --color-on-primary: #ffffff;
+  --color-secondary: #4d7c38;
+  --color-secondary-container: #f0f7ec;
+  --color-tertiary: #4d7c38;
+  --color-tertiary-container: #f0f7ec;
+  --color-outline: #c8c8c8;
+  --color-outline-variant: #d4d4d8;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
 }
 
 :root {
