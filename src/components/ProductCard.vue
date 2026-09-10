@@ -86,6 +86,7 @@ function handleAddToCart() {
 </template>
 
 <style scoped>
+@reference "../style.css";
 .product-card {
   @apply flex flex-col overflow-hidden rounded-lg border border-border bg-bg text-left shadow-sm transition-shadow hover:shadow-md;
 }
