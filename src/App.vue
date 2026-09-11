@@ -1,7 +1,11 @@
+vue
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
+import TheHeader from './components/TheHeader.vue'
 </script>
 
 <template>
-  <HelloWorld />
+  <TheHeader />
+  <main class="pt-16">
+    <router-view />
+  </main>
 </template>
