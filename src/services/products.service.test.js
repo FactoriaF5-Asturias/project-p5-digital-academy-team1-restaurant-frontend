@@ -1,39 +1,76 @@
-// src/services/products.service.test.js
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getProducts } from './products.service'
-import { mockProducts } from '../mocks/products.mock'
+import api from './api'
+
+vi.mock('./api', () => ({
+  default: {
+    get: vi.fn(),
+  },
+}))
+
+function buildSpringPage(overrides = {}) {
+  return {
+    content: [{ id: 1, name: 'Salmon Roll' }],
+    totalElements: 1,
+    totalPages: 1,
+    number: 0,
+    size: 12,
+    first: true,
+    last: true,
+    ...overrides,
+  }
+}
 
 describe('products.service', () => {
-  it('returns only products marked as active', async () => {
-    const { items } = await getProducts({ page: 1, size: 20 })
-
-    expect(items.every((product) => product.active)).toBe(true)
+  beforeEach(() => {
+    vi.clearAllMocks()
   })
 
-  it('excludes deactivated products from the result', async () => {
-    const { items } = await getProducts({ page: 1, size: 20 })
-    const inactiveIds = mockProducts.filter((p) => !p.active).map((p) => p.id)
+  it('requests the real products endpoint with default pagination params', async () => {
+    api.get.mockResolvedValue({ data: buildSpringPage() })
 
-    const hasInactiveProduct = items.some((product) => inactiveIds.includes(product.id))
-    expect(hasInactiveProduct).toBe(false)
+    await getProducts()
+
+    expect(api.get).toHaveBeenCalledWith('/api/v1/products', {
+      params: { page: 0, size: 12 },
+    })
   })
 
-  it('limits the number of items to the given page size', async () => {
-    const { items } = await getProducts({ page: 1, size: 5 })
+  it('converts the 1-indexed page argument to Spring 0-indexed page', async () => {
+    api.get.mockResolvedValue({ data: buildSpringPage({ number: 2 }) })
 
-    expect(items).toHaveLength(5)
+    await getProducts({ page: 3 })
+
+    expect(api.get).toHaveBeenCalledWith('/api/v1/products', {
+      params: { page: 2, size: 12 },
+    })
   })
 
-  it('returns the second page starting right after the first one', async () => {
-    const firstPage = await getProducts({ page: 1, size: 5 })
-    const secondPage = await getProducts({ page: 2, size: 5 })
+  it('includes the category param only when a category is provided', async () => {
+    api.get.mockResolvedValue({ data: buildSpringPage() })
 
-    expect(secondPage.items[0].id).not.toBe(firstPage.items[0].id)
+    await getProducts({ category: 'NIGIRI' })
+
+    expect(api.get).toHaveBeenCalledWith('/api/v1/products', {
+      params: { page: 0, size: 12, category: 'NIGIRI' },
+    })
   })
 
-  it('calculates the total number of pages from the total and the size', async () => {
-    const { total, totalPages, size } = await getProducts({ page: 1, size: 5 })
+  it('maps the Spring Page response into the shape used by the app', async () => {
+    api.get.mockResolvedValue({
+      data: buildSpringPage({ totalElements: 25, totalPages: 3, first: true, last: false }),
+    })
 
-    expect(totalPages).toBe(Math.ceil(total / size))
+    const result = await getProducts()
+
+    expect(result).toEqual({
+      items: [{ id: 1, name: 'Salmon Roll' }],
+      page: 1,
+      size: 12,
+      totalItems: 25,
+      totalPages: 3,
+      isFirstPage: true,
+      isLastPage: false,
+    })
   })
 })
