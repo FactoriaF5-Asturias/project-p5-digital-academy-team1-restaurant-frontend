@@ -7,17 +7,22 @@
 
 import { mockProducts } from '../mocks/products.mock'
 
-// Simula la latencia de una llamada real para poder probar los estados
-// de carga sin depender todavia del backend.
 const simulateNetworkDelay = (ms = 500) =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
-export async function getProducts() {
+export async function getProducts({ page = 1, size = 10 } = {}) {
   // TODO: sustituir por la llamada real cuando exista el endpoint, p. ej.:
   // import api from './api'
-  // const { data } = await api.get('/products')
+  // const { data } = await api.get('/products', { params: { page, size } })
   // return data
 
   await simulateNetworkDelay()
-  return mockProducts.filter((product) => product.active)
+
+  const activeProducts = mockProducts.filter((product) => product.active)
+  const total = activeProducts.length
+  const totalPages = Math.max(1, Math.ceil(total / size))
+  const start = (page - 1) * size
+  const items = activeProducts.slice(start, start + size)
+
+  return { items, total, totalPages, page, size }
 }
