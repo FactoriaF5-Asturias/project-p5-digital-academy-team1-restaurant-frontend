@@ -1,6 +1,6 @@
 <script setup>
 import OrderStatusItem from './OrderStatusItem.vue'
-
+import RiderInfo from './RiderInfo.vue'
 const orderStatuses = [
   {
     name: 'Pedido recibido y Pagado',
@@ -25,6 +25,11 @@ const orderStatuses = [
 ]
 
 const activeStatus = 'En Tránsito con Motorista'
+const rider = {
+  id: 'R-709',
+  name: 'Clara Álvarez',
+  vehicle: 'Moto Eco 01'
+}
 </script>
 
 <template>
@@ -41,5 +46,9 @@ const activeStatus = 'En Tránsito con Motorista'
         :active-status="activeStatus"
       />
     </ul>
+        <RiderInfo
+      v-if="activeStatus === 'En Tránsito con Motorista'"
+      :rider="rider"
+    />
   </section>
 </template>
