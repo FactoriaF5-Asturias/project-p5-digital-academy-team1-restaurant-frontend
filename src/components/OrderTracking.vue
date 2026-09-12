@@ -1,6 +1,10 @@
 <script setup>
 import OrderStatusItem from './OrderStatusItem.vue'
 import RiderInfo from './RiderInfo.vue'
+import { ref } from 'vue'
+
+const isLoading = ref(true)
+
 const orderStatuses = [
   {
     name: 'Pedido recibido y Pagado',
@@ -25,6 +29,7 @@ const orderStatuses = [
 ]
 
 const activeStatus = 'En Tránsito con Motorista'
+
 const rider = {
   id: 'R-709',
   name: 'Clara Álvarez',
@@ -38,17 +43,27 @@ const rider = {
       Estado de tu Pedido
     </h2>
 
-    <ul class="space-y-2">
-      <OrderStatusItem
-        v-for="status in orderStatuses"
-        :key="status.name"
-        :status="status"
-        :active-status="activeStatus"
+    <p
+      v-if="isLoading"
+      class="card p-4 text-left text-on-surface-variant"
+    >
+      Cargando seguimiento del pedido...
+    </p>
+
+    <div v-else>
+      <ul class="space-y-2">
+        <OrderStatusItem
+          v-for="status in orderStatuses"
+          :key="status.name"
+          :status="status"
+          :active-status="activeStatus"
+        />
+      </ul>
+
+      <RiderInfo
+        v-if="activeStatus === 'En Tránsito con Motorista'"
+        :rider="rider"
       />
-    </ul>
-        <RiderInfo
-      v-if="activeStatus === 'En Tránsito con Motorista'"
-      :rider="rider"
-    />
+    </div>
   </section>
 </template>
