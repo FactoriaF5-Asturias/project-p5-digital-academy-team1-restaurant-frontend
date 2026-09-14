@@ -30,6 +30,7 @@ async function mountCartSummary() {
 describe('CartSummary', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    localStorage.clear()
   })
 
   it('shows the empty state with a link back to the carta when there are no products', async () => {
