@@ -16,4 +16,17 @@ describe('OrderStatusItem', () => {
 
     expect(wrapper.text()).toContain('Activo')
   })
+it('does not show the active label when the status is not active', () => {
+  const wrapper = mount(OrderStatusItem, {
+    props: {
+      status: {
+        name: 'Cocina preparando',
+        time: '20:45'
+      },
+      activeStatus: 'En Tránsito con Motorista'
+    }
+  })
+
+  expect(wrapper.text()).not.toContain('Activo')
+})
 })
