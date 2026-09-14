@@ -3,6 +3,7 @@ import CartSummary from "../components/CartSummary.vue";
 import ChannelSelector from "../components/ChannelSelector.vue";
 import PaymentSelector from "../components/PaymentSelector.vue";
 import ChefNoteField from '../components/ChefNoteField.vue'
+import OrderConfirmation from '../components/OrderConfirmation.vue'
 </script>
 
 <template>
@@ -14,6 +15,7 @@ import ChefNoteField from '../components/ChefNoteField.vue'
       <ChannelSelector />
       <PaymentSelector />
       <ChefNoteField />
+      <OrderConfirmation />
     </div>
   </main>
 </template>
