@@ -3,8 +3,8 @@ import OrderStatusItem from './OrderStatusItem.vue'
 import RiderInfo from './RiderInfo.vue'
 import { ref } from 'vue'
 
-const isLoading = ref(true)
-
+const isLoading = ref(false)
+const error = ref(null)
 const orderStatuses = [
   {
     name: 'Pedido recibido y Pagado',
@@ -49,7 +49,12 @@ const rider = {
     >
       Cargando seguimiento del pedido...
     </p>
-
+<p
+  v-else-if="error"
+  class="card p-4 text-left text-error"
+>
+  {{ error }}
+</p>
     <div v-else>
       <ul class="space-y-2">
         <OrderStatusItem
