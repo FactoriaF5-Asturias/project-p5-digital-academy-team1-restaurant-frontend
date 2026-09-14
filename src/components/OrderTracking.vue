@@ -3,7 +3,12 @@ import OrderStatusItem from './OrderStatusItem.vue'
 import RiderInfo from './RiderInfo.vue'
 import { ref } from 'vue'
 
-const isLoading = ref(false)
+const props = defineProps({
+  isLoading: {
+    type: Boolean,
+    default: false
+  }
+})
 const error = ref(null)
 const hasActiveOrder = ref(true)
 
@@ -46,7 +51,7 @@ const rider = {
     </h2>
 
     <p
-      v-if="isLoading"
+    v-if="props.isLoading"
       class="card p-4 text-left text-on-surface-variant"
     >
       Cargando seguimiento del pedido...

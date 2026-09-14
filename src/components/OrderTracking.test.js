@@ -16,4 +16,13 @@ describe('OrderTracking', () => {
   expect(wrapper.text()).toContain('Moto Eco 01')
   expect(wrapper.text()).toContain('Rider ID: R-709')
 })
+it('shows the loading state', () => {
+  const wrapper = mount(OrderTracking, {
+    props: {
+      isLoading: true
+    }
+  })
+
+  expect(wrapper.text()).toContain('Cargando seguimiento del pedido...')
+})
 })
