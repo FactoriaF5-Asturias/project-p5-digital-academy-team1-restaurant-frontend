@@ -12,7 +12,6 @@ export const useCheckoutStore = defineStore("checkout", {
   actions: {
     setChannel(channel) {
       if (this.channel === channel) return;
-
       this.channel = channel;
       this.paymentMethod = null;
     },
@@ -27,7 +26,10 @@ export const useCheckoutStore = defineStore("checkout", {
     setAddress(address) {
       this.address = address;
     },
-     setChefNote(chefNote) {
+    setPaymentMethod(paymentMethod) {
+      this.paymentMethod = paymentMethod;
+    },
+    setChefNote(chefNote) {
       this.chefNote = chefNote
     },
   },
