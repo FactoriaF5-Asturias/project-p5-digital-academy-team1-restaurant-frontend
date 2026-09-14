@@ -1,3 +1,9 @@
+<script setup>
+import KitchenMetrics from '../components/KitchenMetrics.vue'
+</script>
+
 <template>
-  <div>Cesta</div>
+  <main class="page-container py-8">
+    <KitchenMetrics />
+  </main>
 </template>
