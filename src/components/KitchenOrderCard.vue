@@ -1,12 +1,19 @@
 <script setup>
-defineProps({
+import { ref } from 'vue'
+
+const props = defineProps({
   order: {
     type: Object,
     required: true
   }
 })
-</script>
 
+const currentStatus = ref(props.order.status ?? 'PROCESSING')
+
+const changeStatus = (status) => {
+  currentStatus.value = status
+}
+</script>
 <template>
   <article class="card p-6">
     <div class="flex items-center justify-between gap-4">
@@ -35,5 +42,36 @@ defineProps({
         <span>x{{ product.quantity }}</span>
       </li>
     </ul>
+    <div class="mt-6 flex flex-wrap gap-2">
+  <button
+    type="button"
+    class="btn-secondary"
+    :disabled="currentStatus === 'PROCESSING'"
+    @click="changeStatus('PROCESSING')"
+  >
+    En curso
+  </button>
+
+  <button
+    type="button"
+    class="btn-secondary"
+    :disabled="currentStatus === 'DELAYED'"
+    @click="changeStatus('DELAYED')"
+  >
+    Con retraso
+  </button>
+
+  <button
+    type="button"
+    class="btn-primary"
+    :disabled="currentStatus === 'READY'"
+    @click="changeStatus('READY')"
+  >
+    Listo pase
+  </button>
+  <p class="mt-4 text-sm text-on-surface-variant">
+  Estado: {{ currentStatus }}
+</p>
+</div>
   </article>
 </template>
