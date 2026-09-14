@@ -1,3 +1,9 @@
+<script setup>
+import OrderTracking from '../components/OrderTracking.vue';
+</script>
+
 <template>
-  <div>Mi pedido</div>
+  <main>
+    <OrderTracking />
+  </main>
 </template>
