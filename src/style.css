@@ -1,11 +1,5 @@
 @import "tailwindcss";
 
-<<<<<<< HEAD
-/* =========================================================
-   GITSUSHI - DEVELOPER GASTRONOMY
-   Adaptado al prototipo visual de Stitch
-   ========================================================= */
-
 /* Tokens disponibles como utilidades de Tailwind */
 @theme {
   /* Superficies */
@@ -20,22 +14,6 @@
   --color-surface-container-highest: #e5e7eb;
   --color-surface-variant: #f3f4f6;
 
-=======
-/* Tokens disponibles como utilidades de Tailwind */
-@theme {
-  /* Superficies */
-  --color-background: #d3d3d3;
-  --color-surface: #d3d3d3;
-  --color-surface-dim: #c8c8c8;
-  --color-surface-bright: #ffffff;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f9fafc;
-  --color-surface-container: #ffffff;
-  --color-surface-container-high: #f3f4f6;
-  --color-surface-container-highest: #e5e7eb;
-  --color-surface-variant: #f3f4f6;
-
->>>>>>> upstream/dev
   /* Texto */
   --color-on-background: #191919;
   --color-on-surface: #191919;
