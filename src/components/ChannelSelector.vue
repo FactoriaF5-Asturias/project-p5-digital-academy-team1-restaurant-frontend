@@ -1,8 +1,19 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useCheckoutStore } from '../stores/checkout'
+import { useTableDetection } from '../composables/useTableDetection'
 
 const checkoutStore = useCheckoutStore()
+const { isLoading: isDetectingTable, error: tableDetectionError, detectTable } = useTableDetection()
+
+// Solo se intenta detectar la mesa al cargar la Cesta: si el canal ya es
+// "sala" y todavía no hay ningún número de mesa guardado (ni manual ni
+// auto-detectado de una visita anterior en esta misma sesión).
+onMounted(() => {
+  if (checkoutStore.channel === 'sala' && !checkoutStore.tableNumber) {
+    detectTable()
+  }
+})
 
 // Cada campo se expone como un computed con get/set: lee del store
 // y, al escribir (por ejemplo desde v-model), llama a la acción correspondiente.
@@ -54,8 +65,21 @@ const postalCode = computed({
       </button>
     </div>
 
-    <div v-if="checkoutStore.channel === 'sala'" class="channel-selector__field">
-      <label for="table-number" class="channel-selector__label">Número de mesa</label>
+     <div v-if="checkoutStore.channel === 'sala'" class="channel-selector__field">
+      <label for="table-number" class="channel-selector__label">
+        Número de mesa
+        <span v-if="checkoutStore.isTableAutoDetected" class="channel-selector__badge">
+          Auto-detectada
+        </span>
+      </label>
+
+      <p v-if="isDetectingTable" class="channel-selector__hint">
+        Detectando la mesa de tu dispositivo...
+      </p>
+      <p v-else-if="tableDetectionError" class="channel-selector__hint channel-selector__hint--error">
+        {{ tableDetectionError }} Puedes introducirla manualmente.
+      </p>
+
       <input
         id="table-number"
         v-model="tableNumber"
@@ -107,6 +131,15 @@ const postalCode = computed({
 }
 .channel-selector__label {
   @apply text-sm font-medium text-on-surface-variant;
+}
+.channel-selector__badge {
+  @apply rounded-full bg-secondary/10 px-2 py-0.5 text-xs font-semibold text-secondary;
+}
+.channel-selector__hint {
+  @apply text-xs text-on-surface-variant;
+}
+.channel-selector__hint--error {
+  @apply text-error;
 }
 .channel-selector__input {
   @apply rounded-lg border border-outline-variant bg-surface px-3 py-2 text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
