@@ -76,4 +76,45 @@ describe('TheHeader', () => {
     expect(badge.exists()).toBe(true)
     expect(badge.text()).toBe('5')
   })
+
+    it('el menú móvil no está visible al cargar', async () => {
+    const { wrapper } = await mountHeader()
+
+    expect(wrapper.findAll('nav').length).toBe(1)
+  })
+
+  it('al pulsar el botón de menú, se despliega la navegación móvil', async () => {
+    const { wrapper } = await mountHeader()
+
+    const menuButton = wrapper.find('button[aria-label="Abrir menú de navegación"]')
+    await menuButton.trigger('click')
+
+    expect(wrapper.findAll('nav').length).toBe(2)
+  })
+
+  it('al pulsar el botón de nuevo, el menú móvil se cierra', async () => {
+    const { wrapper } = await mountHeader()
+    const menuButton = wrapper.find('button[aria-label="Abrir menú de navegación"]')
+
+    await menuButton.trigger('click')
+    await menuButton.trigger('click')
+
+    expect(wrapper.findAll('nav').length).toBe(1)
+  })
+
+  it('al hacer clic en un enlace del menú móvil, este se cierra', async () => {
+    const { wrapper } = await mountHeader()
+    const menuButton = wrapper.find('button[aria-label="Abrir menú de navegación"]')
+
+    await menuButton.trigger('click')
+
+    const mobileNav = wrapper.findAll('nav')[1]
+    const perfilLink = mobileNav
+      .findAllComponents({ name: 'RouterLink' })
+      .find((link) => link.text().includes('Perfil'))
+
+    await perfilLink.trigger('click')
+
+    expect(wrapper.findAll('nav').length).toBe(1)
+  })
 })
