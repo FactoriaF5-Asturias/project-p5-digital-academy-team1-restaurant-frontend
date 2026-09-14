@@ -81,7 +81,7 @@ function submitAddForm() {
   const priceNumber = parseFloat(newProduct.price)
   const stockNumber = parseInt(newProduct.stock, 10)
 
-  if (!newProduct.name.trim() || !newProduct.description.trim() || !newProduct.price || newProduct.stock === '') {
+  if (!newProduct.name.trim() || !newProduct.description.trim() || newProduct.price === '' || newProduct.stock === '') {
     addFormError.value = 'Completa nombre, precio, stock inicial y descripción.'
     return
   }
@@ -176,7 +176,7 @@ function submitEditProduct() {
   const priceNumber = parseFloat(editProductForm.price)
   const stockNumber = parseInt(editProductForm.stock, 10)
 
-  if (!editProductForm.name.trim() || !editProductForm.description.trim() || !editProductForm.price || editProductForm.stock === '') {
+  if (!editProductForm.name.trim() || !editProductForm.description.trim() || editProductForm.price === '' || editProductForm.stock === '') {
     editProductError.value = 'Completa nombre, precio, stock y descripción.'
     return
   }
