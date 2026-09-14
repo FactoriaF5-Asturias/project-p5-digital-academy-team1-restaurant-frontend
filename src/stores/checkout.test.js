@@ -87,4 +87,21 @@ describe("useCheckoutStore", () => {
 
     expect(checkoutStore.chefNote).toBe('Sin wasabi, por favor')
   })
+
+  it("sets the payment method", () => {
+    const checkoutStore = useCheckoutStore();
+
+    checkoutStore.setPaymentMethod("cashier");
+
+    expect(checkoutStore.paymentMethod).toBe("cashier");
+  });
+
+  it("overwrites a previously selected payment method", () => {
+    const checkoutStore = useCheckoutStore();
+    checkoutStore.setPaymentMethod("cashier");
+
+    checkoutStore.setPaymentMethod("cardOnTable");
+
+    expect(checkoutStore.paymentMethod).toBe("cardOnTable");
+  });
 });
