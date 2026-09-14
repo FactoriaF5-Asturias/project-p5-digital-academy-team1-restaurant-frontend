@@ -7,6 +7,7 @@ import CartSummary from '../components/CartSummary.vue'
 import ChannelSelector from '../components/ChannelSelector.vue'
 import PaymentSelector from '../components/PaymentSelector.vue'
 import ChefNoteField from '../components/ChefNoteField.vue'
+import OrderConfirmation from '../components/OrderConfirmation.vue'
 import { useCartStore } from '../stores/cart'
 
 const routes = [
@@ -58,6 +59,12 @@ describe('CestaView', () => {
     const { wrapper } = await mountCestaView()
 
     expect(wrapper.findComponent(ChefNoteField).exists()).toBe(true)
+  })
+
+  it('renders the OrderConfirmation widget', async () => {
+    const { wrapper } = await mountCestaView()
+
+    expect(wrapper.findComponent(OrderConfirmation).exists()).toBe(true)
   })
 
   it('shows the empty-cart state when there are no products', async () => {
