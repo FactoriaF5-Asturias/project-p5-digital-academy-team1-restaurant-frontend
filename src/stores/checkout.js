@@ -7,6 +7,7 @@ export const useCheckoutStore = defineStore("checkout", {
     isTableAutoDetected: false,
     address: null,
     paymentMethod: null,
+    chefNote: '',
   }),
   actions: {
     setChannel(channel) {
@@ -25,6 +26,9 @@ export const useCheckoutStore = defineStore("checkout", {
     },
     setAddress(address) {
       this.address = address;
+    },
+     setChefNote(chefNote) {
+      this.chefNote = chefNote
     },
   },
 });
