@@ -25,4 +25,15 @@ it('shows the loading state', () => {
 
   expect(wrapper.text()).toContain('Cargando seguimiento del pedido...')
 })
+it('shows the error state', () => {
+  const wrapper = mount(OrderTracking, {
+    props: {
+      error: 'Error al cargar el seguimiento del pedido'
+    }
+  })
+
+  expect(wrapper.text()).toContain(
+    'Error al cargar el seguimiento del pedido'
+  )
+})
 })

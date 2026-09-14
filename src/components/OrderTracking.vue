@@ -1,15 +1,19 @@
 <script setup>
+import { ref } from 'vue'
 import OrderStatusItem from './OrderStatusItem.vue'
 import RiderInfo from './RiderInfo.vue'
-import { ref } from 'vue'
 
 const props = defineProps({
   isLoading: {
     type: Boolean,
     default: false
+  },
+  error: {
+    type: String,
+    default: null
   }
 })
-const error = ref(null)
+
 const hasActiveOrder = ref(true)
 
 const orderStatuses = [
@@ -51,23 +55,26 @@ const rider = {
     </h2>
 
     <p
-    v-if="props.isLoading"
+      v-if="props.isLoading"
       class="card p-4 text-left text-on-surface-variant"
     >
       Cargando seguimiento del pedido...
     </p>
-<p
-  v-else-if="error"
-  class="card p-4 text-left text-error"
->
-  {{ error }}
-</p>
-<p
-  v-else-if="!hasActiveOrder"
-  class="card p-4 text-left text-on-surface-variant"
->
-  No tienes ningún pedido activo.
-</p>
+
+    <p
+      v-else-if="props.error"
+      class="card p-4 text-left text-error"
+    >
+      {{ props.error }}
+    </p>
+
+    <p
+      v-else-if="!hasActiveOrder"
+      class="card p-4 text-left text-on-surface-variant"
+    >
+      No tienes ningún pedido activo.
+    </p>
+
     <div v-else>
       <ul class="space-y-2">
         <OrderStatusItem
