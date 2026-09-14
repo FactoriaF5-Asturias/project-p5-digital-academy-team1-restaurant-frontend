@@ -87,11 +87,13 @@ describe('ChannelSelector', () => {
     expect(checkoutStore.paymentMethod).toBeNull()
   })
 
-  it('shows a detecting message while the table is being auto-detected', () => {
-    const { wrapper } = mountChannelSelector()
+  it('shows a detecting message while the table is being auto-detected', async () => {
+  const { wrapper } = mountChannelSelector()
 
-    expect(wrapper.text()).toContain('Detectando la mesa de tu dispositivo')
-  })
+  await flushPromises()
+
+  expect(wrapper.text()).toContain('Detectando la mesa de tu dispositivo')
+})
 
   it('prefills the table number and shows the "Auto-detectada" badge on successful detection', async () => {
     detectSpy.mockResolvedValue({ tableNumber: 5 })
