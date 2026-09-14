@@ -1,9 +1,22 @@
+// src/stores/cart.js
 import { defineStore } from "pinia";
 import { TAX_RATE } from "../constants/tax";
 
+const CART_STORAGE_KEY = "gitsushi-cart-items";
+
+function loadStoredItems() {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    console.error("[cart] Error reading stored cart:", err);
+    return [];
+  }
+}
+
 export const useCartStore = defineStore("cart", {
   state: () => ({
-    items: [],
+    items: loadStoredItems(),
   }),
   getters: {
     itemCount: (state) =>
@@ -42,12 +55,15 @@ export const useCartStore = defineStore("cart", {
       } else {
         this.items.push({ product, quantity: 1 });
       }
+
+      this.persist();
     },
 
     incrementQuantity(productId) {
       const item = this.items.find((item) => item.product.id === productId);
       if (item) {
         item.quantity += 1;
+        this.persist();
       }
     },
 
@@ -57,6 +73,7 @@ export const useCartStore = defineStore("cart", {
 
       if (item.quantity > 1) {
         item.quantity -= 1;
+        this.persist();
       } else {
         this.removeProduct(productId);
       }
@@ -64,6 +81,24 @@ export const useCartStore = defineStore("cart", {
 
     removeProduct(productId) {
       this.items = this.items.filter((item) => item.product.id !== productId);
+      this.persist();
+    },
+
+    clearCart() {
+      this.items = [];
+      try {
+        localStorage.removeItem(CART_STORAGE_KEY);
+      } catch (err) {
+        console.error("[cart] Error clearing stored cart:", err);
+      }
+    },
+
+    persist() {
+      try {
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(this.items));
+      } catch (err) {
+        console.error("[cart] Error saving cart:", err);
+      }
     },
   },
 });

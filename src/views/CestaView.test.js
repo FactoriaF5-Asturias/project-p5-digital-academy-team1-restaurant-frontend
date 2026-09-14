@@ -20,6 +20,7 @@ async function mountCestaView() {
   router.push('/cesta')
   await router.isReady()
 
+  localStorage.clear()
   setActivePinia(createPinia())
   const cartStore = useCartStore()
 

@@ -32,6 +32,7 @@ async function mountOrderConfirmation() {
 describe('OrderConfirmation', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    localStorage.clear()
   })
 
   it('disables the confirm button when the cart is empty', async () => {
