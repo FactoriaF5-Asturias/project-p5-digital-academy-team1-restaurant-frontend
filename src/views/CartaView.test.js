@@ -47,6 +47,7 @@ async function mountCartaView() {
 describe('CartaView', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    localStorage.clear()
   })
 
   it('shows a loading message while fetching', async () => {
