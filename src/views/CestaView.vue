@@ -1,6 +1,7 @@
 <script setup>
 import CartSummary from "../components/CartSummary.vue";
 import ChannelSelector from "../components/ChannelSelector.vue";
+import ChefNoteField from '../components/ChefNoteField.vue'
 </script>
 
 <template>
@@ -10,6 +11,7 @@ import ChannelSelector from "../components/ChannelSelector.vue";
     <div class="cesta-view__content">
       <CartSummary />
       <ChannelSelector />
+      <ChefNoteField />
     </div>
   </main>
 </template>

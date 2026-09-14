@@ -7,7 +7,7 @@ describe("useCheckoutStore", () => {
     setActivePinia(createPinia());
   });
 
-  it("starts with the sala channel and no table, address or payment method", () => {
+   it('starts with the sala channel and no table, address, payment method or chef note', () => {
     const checkoutStore = useCheckoutStore();
 
     expect(checkoutStore.channel).toBe("sala");
@@ -15,6 +15,7 @@ describe("useCheckoutStore", () => {
     expect(checkoutStore.isTableAutoDetected).toBe(false);
     expect(checkoutStore.address).toBeNull();
     expect(checkoutStore.paymentMethod).toBeNull();
+    expect(checkoutStore.chefNote).toBe('')
   });
 
   it("changes the channel", () => {
@@ -78,4 +79,12 @@ describe("useCheckoutStore", () => {
 
     expect(checkoutStore.address).toBe("Calle Falsa 123");
   });
+
+  it('stores the chef note', () => {
+    const checkoutStore = useCheckoutStore()
+
+    checkoutStore.setChefNote('Sin wasabi, por favor')
+
+    expect(checkoutStore.chefNote).toBe('Sin wasabi, por favor')
+  })
 });
