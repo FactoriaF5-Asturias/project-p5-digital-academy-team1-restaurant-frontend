@@ -1,24 +1,30 @@
-import { defineStore } from 'pinia'
+import { defineStore } from "pinia";
 
-export const useCheckoutStore = defineStore('checkout', {
+export const useCheckoutStore = defineStore("checkout", {
   state: () => ({
-    channel: 'sala',
+    channel: "sala",
     tableNumber: null,
+    isTableAutoDetected: false,
     address: null,
     paymentMethod: null,
   }),
   actions: {
     setChannel(channel) {
-      if (this.channel === channel) return
+      if (this.channel === channel) return;
 
-      this.channel = channel
-      this.paymentMethod = null
+      this.channel = channel;
+      this.paymentMethod = null;
     },
     setTableNumber(tableNumber) {
-      this.tableNumber = tableNumber
+      this.tableNumber = tableNumber;
+      this.isTableAutoDetected = false;
+    },
+    setAutoDetectedTable(tableNumber) {
+      this.tableNumber = tableNumber;
+      this.isTableAutoDetected = true;
     },
     setAddress(address) {
-      this.address = address
+      this.address = address;
     },
   },
-})
+});
