@@ -1,5 +1,4 @@
 <script setup>
-import { ref } from 'vue'
 import OrderStatusItem from './OrderStatusItem.vue'
 import RiderInfo from './RiderInfo.vue'
 
@@ -11,10 +10,13 @@ const props = defineProps({
   error: {
     type: String,
     default: null
-  }
+  },
+  hasActiveOrder: {
+  type: Boolean,
+  default: true
+}
 })
 
-const hasActiveOrder = ref(true)
 
 const orderStatuses = [
   {
@@ -69,7 +71,7 @@ const rider = {
     </p>
 
     <p
-      v-else-if="!hasActiveOrder"
+      v-else-if="!props.hasActiveOrder"
       class="card p-4 text-left text-on-surface-variant"
     >
       No tienes ningún pedido activo.

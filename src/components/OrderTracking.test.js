@@ -36,4 +36,13 @@ it('shows the error state', () => {
     'Error al cargar el seguimiento del pedido'
   )
 })
+it('shows the empty state when there is no active order', () => {
+  const wrapper = mount(OrderTracking, {
+    props: {
+      hasActiveOrder: false
+    }
+  })
+
+  expect(wrapper.text()).toContain('No tienes ningún pedido activo.')
+})
 })
