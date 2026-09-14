@@ -5,6 +5,8 @@ import { ref } from 'vue'
 
 const isLoading = ref(false)
 const error = ref(null)
+const hasActiveOrder = ref(true)
+
 const orderStatuses = [
   {
     name: 'Pedido recibido y Pagado',
@@ -54,6 +56,12 @@ const rider = {
   class="card p-4 text-left text-error"
 >
   {{ error }}
+</p>
+<p
+  v-else-if="!hasActiveOrder"
+  class="card p-4 text-left text-on-surface-variant"
+>
+  No tienes ningún pedido activo.
 </p>
     <div v-else>
       <ul class="space-y-2">
