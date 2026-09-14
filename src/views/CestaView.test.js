@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import CestaView from './CestaView.vue'
 import CartSummary from '../components/CartSummary.vue'
 import ChannelSelector from '../components/ChannelSelector.vue'
+import PaymentSelector from '../components/PaymentSelector.vue'
 import ChefNoteField from '../components/ChefNoteField.vue'
 import { useCartStore } from '../stores/cart'
 
@@ -45,6 +46,12 @@ describe('CestaView', () => {
     const { wrapper } = await mountCestaView()
 
     expect(wrapper.findComponent(ChannelSelector).exists()).toBe(true)
+  })
+
+  it('renders the PaymentSelector widget', async () => {
+    const { wrapper } = await mountCestaView()
+
+    expect(wrapper.findComponent(PaymentSelector).exists()).toBe(true)
   })
 
   it('renders the ChefNoteField widget', async () => {
