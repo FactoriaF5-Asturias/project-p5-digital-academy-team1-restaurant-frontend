@@ -1,6 +1,7 @@
 <script setup>
 import CartSummary from "../components/CartSummary.vue";
 import ChannelSelector from "../components/ChannelSelector.vue";
+import PaymentSelector from "../components/PaymentSelector.vue";
 import ChefNoteField from '../components/ChefNoteField.vue'
 </script>
 
@@ -11,6 +12,7 @@ import ChefNoteField from '../components/ChefNoteField.vue'
     <div class="cesta-view__content">
       <CartSummary />
       <ChannelSelector />
+      <PaymentSelector />
       <ChefNoteField />
     </div>
   </main>
