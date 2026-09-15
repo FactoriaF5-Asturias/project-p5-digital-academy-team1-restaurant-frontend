@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { getLinkedTableMock } from '../mocks/tables.mock'
+import { getLinkedTable } from '../services/tables.service'
 import { useCheckoutStore } from '../stores/checkout'
 
 export function useTableDetection() {
@@ -11,7 +11,7 @@ export function useTableDetection() {
     isLoading.value = true
     error.value = null
     try {
-      const table = await getLinkedTableMock()
+      const table = await getLinkedTable()
       checkoutStore.setAutoDetectedTable(table.tableNumber)
     } catch (err) {
       error.value = 'No se ha podido detectar la mesa automáticamente.'
