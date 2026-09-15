@@ -30,7 +30,7 @@ async function confirmOrder() {
 
     await createOrder({ items, chefNote: checkoutStore.chefNote })
 
-    cartStore.$reset()
+    cartStore.clearCart()
     router.push({ name: 'mi-pedido' })
   } catch (err) {
     errorMessage.value = 'No se ha podido confirmar el pedido. Inténtalo de nuevo.'

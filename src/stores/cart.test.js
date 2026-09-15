@@ -7,6 +7,7 @@ const productB = { id: 2, name: 'Dragon Roll', price: 12.5 }
 
 describe('useCartStore', () => {
   beforeEach(() => {
+    localStorage.clear()
     setActivePinia(createPinia())
   })
 
@@ -102,5 +103,34 @@ describe('useCartStore', () => {
     cartStore.removeProduct(999)
 
     expect(cartStore.items).toEqual([])
+  })
+
+  it('persists the cart to localStorage when a product is added', () => {
+    const cartStore = useCartStore()
+
+    cartStore.addProduct(productA)
+
+    const stored = JSON.parse(localStorage.getItem('gitsushi-cart-items'))
+    expect(stored).toEqual([{ product: productA, quantity: 1 }])
+  })
+
+  it('restores the cart from localStorage when the store is created again', () => {
+    const firstCartStore = useCartStore()
+    firstCartStore.addProduct(productA)
+
+    setActivePinia(createPinia())
+    const secondCartStore = useCartStore()
+
+    expect(secondCartStore.items).toEqual([{ product: productA, quantity: 1 }])
+  })
+
+  it('empties the cart in memory and in localStorage when cleared', () => {
+    const cartStore = useCartStore()
+    cartStore.addProduct(productA)
+
+    cartStore.clearCart()
+
+    expect(cartStore.items).toEqual([])
+    expect(localStorage.getItem('gitsushi-cart-items')).toBeNull()
   })
 })
