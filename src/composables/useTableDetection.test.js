@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useTableDetection } from './useTableDetection'
 import { useCheckoutStore } from '../stores/checkout'
-import * as tablesMock from '../mocks/tables.mock'
+import * as tablesService from '../services/tables.service'
 
 describe('useTableDetection', () => {
   beforeEach(() => {
@@ -11,7 +11,7 @@ describe('useTableDetection', () => {
   })
 
   it('sets isLoading to true while detecting and false when finished', async () => {
-    vi.spyOn(tablesMock, 'getLinkedTableMock').mockResolvedValue({ tableNumber: 5 })
+    vi.spyOn(tablesService, 'getLinkedTable').mockResolvedValue({ tableNumber: 5 })
     const { isLoading, detectTable } = useTableDetection()
 
     const promise = detectTable()
@@ -22,7 +22,7 @@ describe('useTableDetection', () => {
   })
 
   it('stores the detected table as auto-detected on success', async () => {
-    vi.spyOn(tablesMock, 'getLinkedTableMock').mockResolvedValue({ tableNumber: 5 })
+    vi.spyOn(tablesService, 'getLinkedTable').mockResolvedValue({ tableNumber: 5 })
     const checkoutStore = useCheckoutStore()
     const { detectTable } = useTableDetection()
 
@@ -33,7 +33,7 @@ describe('useTableDetection', () => {
   })
 
   it('stores an error message when the detection fails', async () => {
-    vi.spyOn(tablesMock, 'getLinkedTableMock').mockRejectedValue(new Error('device not linked'))
+    vi.spyOn(tablesService, 'getLinkedTable').mockRejectedValue(new Error('device not linked'))
     const checkoutStore = useCheckoutStore()
     const { error, detectTable } = useTableDetection()
 
