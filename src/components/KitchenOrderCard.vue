@@ -42,6 +42,18 @@ const changeStatus = (status) => {
         <span>x{{ product.quantity }}</span>
       </li>
     </ul>
+<div
+  v-if="order.priorityNote"
+  class="mt-4 rounded-lg border border-error bg-error-container p-4"
+>
+  <p class="text-sm font-bold text-error">
+    ⚠ Nota de comanda prioritaria
+  </p>
+
+  <p class="mt-1 font-medium text-on-error-container">
+    {{ order.priorityNote }}
+  </p>
+</div>
     <div class="mt-6 flex flex-wrap gap-2">
   <button
     type="button"

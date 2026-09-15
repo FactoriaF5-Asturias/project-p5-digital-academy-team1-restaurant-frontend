@@ -73,4 +73,54 @@ describe('KitchenOrderCard', () => {
     expect(wrapper.text()).toContain('Estado: READY')
     expect(buttons[2].attributes('disabled')).toBeDefined()
   })
+  it('shows the priority note when the order has one', () => {
+  const orderWithPriorityNote = {
+    ...order,
+    priorityNote: 'ALERGIA AL MARISCO - Preparar por separado'
+  }
+
+  const wrapper = mount(KitchenOrderCard, {
+    props: {
+      order: orderWithPriorityNote
+    }
+  })
+
+  expect(wrapper.text()).toContain('Nota de comanda prioritaria')
+  expect(wrapper.text()).toContain(
+    'ALERGIA AL MARISCO - Preparar por separado'
+  )
+})
+
+it('does not show a priority note when the order has none', () => {
+  const wrapper = mount(KitchenOrderCard, {
+    props: {
+      order
+    }
+  })
+
+  expect(wrapper.text()).not.toContain('Nota de comanda prioritaria')
+})
+
+it('keeps the priority note visible after changing the order status', async () => {
+  const orderWithPriorityNote = {
+    ...order,
+    priorityNote: 'ALERGIA AL MARISCO - Preparar por separado'
+  }
+
+  const wrapper = mount(KitchenOrderCard, {
+    props: {
+      order: orderWithPriorityNote
+    }
+  })
+
+  const buttons = wrapper.findAll('button')
+
+  await buttons[2].trigger('click')
+
+  expect(wrapper.text()).toContain('Estado: READY')
+  expect(wrapper.text()).toContain('Nota de comanda prioritaria')
+  expect(wrapper.text()).toContain(
+    'ALERGIA AL MARISCO - Preparar por separado'
+  )
+})
 })
