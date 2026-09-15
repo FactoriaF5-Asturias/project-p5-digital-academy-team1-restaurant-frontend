@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ChannelSelector from './ChannelSelector.vue'
 import { useCheckoutStore } from '../stores/checkout'
-import * as tablesMock from '../mocks/tables.mock'
+import * as tablesService from '../services/tables.service'
 
 let detectSpy
 
@@ -22,7 +22,7 @@ describe('ChannelSelector', () => {
     vi.restoreAllMocks()
     // Por defecto, la detección se deja "colgada" (nunca resuelve), para que
     // los tests que no dependen de ella no se vean afectados por su resultado.
-    detectSpy = vi.spyOn(tablesMock, 'getLinkedTableMock').mockReturnValue(new Promise(() => {}))
+    detectSpy = vi.spyOn(tablesService, 'getLinkedTable').mockReturnValue(new Promise(() => {}))
   })
 
   it('shows "En sala" as active and the table number field by default', () => {
