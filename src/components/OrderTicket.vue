@@ -8,6 +8,10 @@ defineProps({
     type: String,
     required: true,
   },
+  items: {
+    type: Array,
+    required: true,
+  },
 })
 </script>
 
@@ -18,6 +22,17 @@ defineProps({
     <div>
       <p>Pedido #{{ orderNumber }}</p>
       <p>Estado del pago: {{ paymentStatus }}</p>
+    </div>
+
+    <div>
+      <article
+        v-for="item in items"
+        :key="item.id"
+      >
+        <p>{{ item.name }}</p>
+        <p>Cantidad: {{ item.quantity }}</p>
+        <p>Precio: {{ item.price }} €</p>
+      </article>
     </div>
   </section>
 </template>
