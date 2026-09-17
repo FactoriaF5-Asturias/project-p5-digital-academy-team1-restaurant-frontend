@@ -19,6 +19,10 @@ const order = {
       price: 8.9,
     },
   ],
+  subtotal: 21.90,
+deliveryFee: 2.50,
+total: 24.40,
+paymentMethod: 'Tarjeta',
 }
 </script>
 
@@ -26,10 +30,14 @@ const order = {
   <main>
     <OrderTracking />
 
-    <OrderTicket
-      :order-number="order.orderNumber"
-      :payment-status="order.paymentStatus"
-      :items="order.items"
-    />
+  <OrderTicket
+  :order-number="order.orderNumber"
+  :payment-status="order.paymentStatus"
+  :items="order.items"
+  :subtotal="order.subtotal"
+  :delivery-fee="order.deliveryFee"
+  :total="order.total"
+  :payment-method="order.paymentMethod"
+/>
   </main>
 </template>

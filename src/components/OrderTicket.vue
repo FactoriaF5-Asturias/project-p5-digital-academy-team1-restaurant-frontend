@@ -1,4 +1,6 @@
 <script setup>
+import OrderSummary from './OrderSummary.vue'
+
 defineProps({
   orderNumber: {
     type: String,
@@ -10,6 +12,22 @@ defineProps({
   },
   items: {
     type: Array,
+    required: true,
+  },
+  subtotal: {
+    type: Number,
+    required: true,
+  },
+  deliveryFee: {
+    type: Number,
+    required: true,
+  },
+  total: {
+    type: Number,
+    required: true,
+  },
+  paymentMethod: {
+    type: String,
     required: true,
   },
 })
@@ -54,5 +72,12 @@ defineProps({
         </p>
       </article>
     </div>
+
+    <OrderSummary
+      :subtotal="subtotal"
+      :delivery-fee="deliveryFee"
+      :total="total"
+      :payment-method="paymentMethod"
+    />
   </section>
 </template>
