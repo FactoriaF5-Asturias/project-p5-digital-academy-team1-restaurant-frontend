@@ -19,14 +19,31 @@ defineProps({
 })
 </script>
 <template>
-  <section>
-    <h3>Resumen del pago</h3>
+  <section class="mt-6 border-t border-gray-200 pt-6">
+    <h3 class="mb-4 text-lg font-semibold">
+      Resumen del pago
+    </h3>
 
-    <div>
-      <p>Subtotal: {{ subtotal }} €</p>
-      <p>Gastos de entrega: {{ deliveryFee }} €</p>
-      <p>Total abonado: {{ total }} €</p>
-      <p>Método de pago: {{ paymentMethod }}</p>
+    <div class="space-y-2 text-sm">
+      <div class="flex justify-between">
+        <span class="text-gray-500">Subtotal</span>
+        <span>{{ subtotal }} €</span>
+      </div>
+
+      <div class="flex justify-between">
+        <span class="text-gray-500">Gastos de entrega</span>
+        <span>{{ deliveryFee }} €</span>
+      </div>
+
+      <div class="flex justify-between border-t border-gray-200 pt-3 font-bold">
+        <span>Total abonado</span>
+        <span>{{ total }} €</span>
+      </div>
+
+      <div class="flex justify-between pt-2">
+        <span class="text-gray-500">Método de pago</span>
+        <span>{{ paymentMethod }}</span>
+      </div>
     </div>
   </section>
 </template>
