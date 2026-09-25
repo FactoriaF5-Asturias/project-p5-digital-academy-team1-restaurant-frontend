@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCartStore } from './cart'
-import { disableDefaultColors } from 'vitest/node'
+import { useExclusiveOffersStore } from './exclusiveOffers'
 
 const productA = { id: 1, name: 'Salmon Roll', price: 10 }
 const productB = { id: 2, name: 'Dragon Roll', price: 12.5 }
@@ -64,6 +64,25 @@ describe('useCartStore', () => {
     expect(cartStore.subtotal).toBeCloseTo(32.5)
     expect(cartStore.taxAmount).toBeCloseTo(3.25)
     expect(cartStore.total).toBeCloseTo(35.75)
+  })
+
+    it('calculates discountAmount as 0 when no line has an active offer', () => {
+    const cartStore = useCartStore()
+    cartStore.addProduct(productA)
+
+    expect(cartStore.discountAmount).toBe(0)
+  })
+
+  it('calculates discountAmount from the active exclusive offers across lines', () => {
+    const cartStore = useCartStore()
+    const offersStore = useExclusiveOffersStore()
+    offersStore.offers = [{ productId: productA.id, discountPercentage: 15, expiresAt: null }]
+
+    cartStore.addProduct(productA)
+    cartStore.incrementQuantity(productA.id)
+
+    // 10 € * 15% = 1,5 € de descuento por unidad, 2 unidades = 3 €
+    expect(cartStore.discountAmount).toBeCloseTo(3)
   })
 
   it('decreases the quantity without removing the line when above 1', () => {

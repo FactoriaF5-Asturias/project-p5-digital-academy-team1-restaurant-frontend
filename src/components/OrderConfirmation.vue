@@ -50,6 +50,13 @@ async function confirmOrder() {
         <dt>Subtotal</dt>
         <dd>{{ cartStore.subtotal.toFixed(2) }} €</dd>
       </div>
+      <div
+        v-if="cartStore.discountAmount > 0"
+        class="order-confirmation__row order-confirmation__row--discount"
+      >
+        <dt>Descuento</dt>
+        <dd>−{{ cartStore.discountAmount.toFixed(2) }} €</dd>
+      </div>
       <div class="order-confirmation__row">
         <dt>IVA</dt>
         <dd>{{ cartStore.taxAmount.toFixed(2) }} €</dd>
@@ -90,6 +97,10 @@ async function confirmOrder() {
 
 .order-confirmation__row {
   @apply flex justify-between text-sm;
+}
+
+.order-confirmation__row--discount {
+  @apply text-secondary;
 }
 
 .order-confirmation__row--total {
