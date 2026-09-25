@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import OrderConfirmation from './OrderConfirmation.vue'
 import { useCartStore } from '../stores/cart'
 import { useCheckoutStore } from '../stores/checkout'
+import { useExclusiveOffersStore } from '../stores/exclusiveOffers'
 import * as ordersService from '../services/orders.service'
 
 const routes = [
@@ -56,6 +57,25 @@ describe('OrderConfirmation', () => {
     await flushPromises()
 
     expect(wrapper.find('.order-confirmation__button').attributes('disabled')).toBeUndefined()
+  })
+
+  it('does not show the discount row when no active offer applies', async () => {
+    const { wrapper, cartStore } = await mountOrderConfirmation()
+    cartStore.addProduct({ id: 1, name: 'Salmon Roll', price: 10 })
+    await flushPromises()
+
+    expect(wrapper.find('.order-confirmation__row--discount').exists()).toBe(false)
+  })
+
+  it('shows the discount row with the amount saved when an active offer applies', async () => {
+    const { wrapper, cartStore } = await mountOrderConfirmation()
+    const offersStore = useExclusiveOffersStore()
+    offersStore.offers = [{ productId: 1, discountPercentage: 15, expiresAt: null }]
+    cartStore.addProduct({ id: 1, name: 'Salmon Roll', price: 10 })
+    await flushPromises()
+
+    // 10 € * 15% = 1,50 € de descuento
+    expect(wrapper.find('.order-confirmation__row--discount').text()).toContain('1.50')
   })
 
   it('sends the mapped cart items and chef note, then empties the cart and navigates to the tracking view', async () => {
