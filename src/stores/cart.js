@@ -1,6 +1,7 @@
 // src/stores/cart.js
 import { defineStore } from "pinia";
 import { TAX_RATE } from "../constants/tax";
+import { useExclusiveOffersStore } from "./exclusiveOffers";
 
 const CART_STORAGE_KEY = "gitsushi-cart-items";
 
@@ -24,13 +25,22 @@ export const useCartStore = defineStore("cart", {
 
     isEmpty: (state) => state.items.length === 0,
 
-    lines: (state) =>
-      state.items.map((item) => ({
-        product: item.product,
-        quantity: item.quantity,
-        unitPrice: item.product.price,
-        subtotal: item.product.price * item.quantity,
-      })),
+    lines: (state) => {
+      const offersStore = useExclusiveOffersStore();
+
+      return state.items.map((item) => {
+        const discountPercentage = offersStore.discountForProduct(item.product.id);
+        const unitPrice = item.product.price * (1 - discountPercentage / 100);
+
+        return {
+          product: item.product,
+          quantity: item.quantity,
+          unitPrice,
+          subtotal: unitPrice * item.quantity,
+          discountPercentage,
+        };
+      });
+    },
 
     subtotal() {
       return this.lines.reduce((total, line) => total + line.subtotal, 0);

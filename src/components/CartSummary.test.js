@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import CartSummary from './CartSummary.vue'
 import { useCartStore } from '../stores/cart'
+import { useExclusiveOffersStore } from '../stores/exclusiveOffers'
 
 const routes = [
   { path: '/', name: 'carta', component: { template: '<div>Carta</div>' } },
@@ -19,12 +20,13 @@ async function mountCartSummary() {
 
   setActivePinia(createPinia())
   const cartStore = useCartStore()
+  const offersStore = useExclusiveOffersStore()
 
   const wrapper = mount(CartSummary, {
     global: { plugins: [router] },
   })
 
-  return { wrapper, cartStore }
+  return { wrapper, cartStore, offersStore }
 }
 
 describe('CartSummary', () => {
@@ -61,6 +63,32 @@ describe('CartSummary', () => {
     expect(totalsText).toContain('20,00')
     expect(totalsText).toContain('2,00')
     expect(totalsText).toContain('22,00')
+  })
+
+  it('does not show a discount badge or original price when the product has no active offer', async () => {
+    const { wrapper, cartStore } = await mountCartSummary()
+    cartStore.addProduct(productA)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.cart-summary__discount-badge').exists()).toBe(false)
+    expect(wrapper.find('.cart-summary__line-price-original').exists()).toBe(false)
+  })
+
+  it('shows the original price struck through, a discount badge, and reduced totals when the product has an active exclusive offer', async () => {
+    const { wrapper, cartStore, offersStore } = await mountCartSummary()
+    offersStore.offers = [{ productId: productA.id, discountPercentage: 15, expiresAt: null }]
+    cartStore.addProduct(productA)
+    await wrapper.vm.$nextTick()
+
+    const line = wrapper.find('.cart-summary__line')
+    expect(line.find('.cart-summary__line-price-original').text()).toContain('10,00')
+    expect(line.find('.cart-summary__discount-badge').text()).toContain('15%')
+
+    // 10 * 0,85 = 8,50 subtotal, 10% IVA = 0,85, total = 9,35
+    const totalsText = wrapper.find('.cart-summary__totals').text()
+    expect(totalsText).toContain('8,50')
+    expect(totalsText).toContain('0,85')
+    expect(totalsText).toContain('9,35')
   })
 
   it('increases the quantity when clicking the + button', async () => {
