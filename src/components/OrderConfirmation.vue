@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cart'
 import { useCheckoutStore } from '../stores/checkout'
 import { createOrder } from '../services/orders.service'
+import { getBackendPaymentMethod } from '../constants/paymentMethods'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -28,7 +29,12 @@ async function confirmOrder() {
       quantity: item.quantity,
     }))
 
-    await createOrder({ items, chefNote: checkoutStore.chefNote })
+    await createOrder({
+      items,
+      chefNote: checkoutStore.chefNote,
+      channel: checkoutStore.channel,
+      paymentMethod: getBackendPaymentMethod(checkoutStore.paymentMethod),
+     })
 
     cartStore.clearCart()
     router.push({ name: 'mi-pedido' })
