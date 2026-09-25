@@ -48,7 +48,18 @@ function handleRemove(line) {
         >
           <div class="cart-summary__line-info">
             <p class="cart-summary__line-name">{{ line.product.name }}</p>
-            <p class="cart-summary__line-price">{{ formatCurrency(line.unitPrice) }} / ud.</p>
+            <p class="cart-summary__line-price">
+              <span v-if="line.discountPercentage > 0" class="cart-summary__line-price-original">
+                <span class="sr-only">Precio original: </span><s>{{ formatCurrency(line.product.price) }}</s>
+              </span>
+              {{ formatCurrency(line.unitPrice) }} / ud.
+            </p>
+            <p
+              v-if="line.discountPercentage > 0"
+              class="label-badge text-secondary cart-summary__discount-badge"
+            >
+              <span class="sr-only">Descuento aplicado: </span>−{{ line.discountPercentage }}% oferta exclusiva aplicada
+            </p>
           </div>
 
           <div
@@ -132,6 +143,12 @@ function handleRemove(line) {
 }
 .cart-summary__line-price {
   @apply text-sm text-on-surface-variant;
+}
+.cart-summary__line-price-original {
+  @apply mr-1 text-xs text-on-surface-variant opacity-70 line-through;
+}
+.cart-summary__discount-badge {
+  @apply mt-0.5;
 }
 .cart-summary__quantity {
   @apply flex items-center gap-2 rounded-full border border-outline-variant px-2 py-1;
