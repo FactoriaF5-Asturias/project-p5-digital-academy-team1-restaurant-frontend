@@ -14,10 +14,10 @@ import ExclusiveOffersCard from "../components/ExclusiveOffersCard.vue";
 @reference "../style.css";
 
 .perfil-view {
-  @apply flex flex-col gap-6 max-w-3x1 mx-auto px-4 sm:px-6 py-8;
+  @apply flex flex-col gap-6 max-w-3xl mx-auto px-4 sm:px-6 py-8;
 }
 
-.perfil-view-title {
+.perfil-view__title {
   @apply text-2xl font-heading;
 }
 </style>
