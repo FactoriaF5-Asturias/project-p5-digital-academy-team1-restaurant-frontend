@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCartStore } from './cart'
+import { disableDefaultColors } from 'vitest/node'
 
 const productA = { id: 1, name: 'Salmon Roll', price: 10 }
 const productB = { id: 2, name: 'Dragon Roll', price: 12.5 }
@@ -48,7 +49,7 @@ describe('useCartStore', () => {
     cartStore.incrementQuantity(productA.id)
 
     expect(cartStore.lines).toEqual([
-      { product: productA, quantity: 2, unitPrice: 10, subtotal: 20 },
+      { product: productA, quantity: 2, unitPrice: 10, subtotal: 20, discountPercentage:0 },
     ])
   })
 
