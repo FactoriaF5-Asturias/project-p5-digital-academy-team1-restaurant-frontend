@@ -78,7 +78,7 @@ describe('OrderConfirmation', () => {
     expect(wrapper.find('.order-confirmation__row--discount').text()).toContain('1.50')
   })
 
-  it('sends the mapped cart items and chef note, then empties the cart and navigates to the tracking view', async () => {
+    it('sends the mapped cart items, channel and payment method, then empties the cart and navigates to the tracking view', async () => {
     vi.spyOn(ordersService, 'createOrder').mockResolvedValue({ id: 99 })
     const { wrapper, cartStore, checkoutStore, router } = await mountOrderConfirmation()
     cartStore.addProduct({ id: 1, name: 'Salmon Roll', price: 10 })
@@ -92,6 +92,8 @@ describe('OrderConfirmation', () => {
     expect(ordersService.createOrder).toHaveBeenCalledWith({
       items: [{ productId: 1, quantity: 1 }],
       chefNote: 'Sin wasabi',
+      channel: 'sala',
+      paymentMethod: 'CASH_ONSITE',
     })
     expect(cartStore.isEmpty).toBe(true)
     expect(router.currentRoute.value.name).toBe('mi-pedido')
