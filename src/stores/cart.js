@@ -46,6 +46,13 @@ export const useCartStore = defineStore("cart", {
       return this.lines.reduce((total, line) => total + line.subtotal, 0);
     },
 
+    discountAmount() {
+      return this.lines.reduce(
+        (total, line) => total + (line.product.price - line.unitPrice) * line.quantity,
+        0,
+      );
+    },
+
     taxAmount() {
       return this.subtotal * TAX_RATE;
     },
