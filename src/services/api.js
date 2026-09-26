@@ -7,7 +7,19 @@ const api = axios.create({
   xsrfHeaderName: 'X-XSRF-TOKEN',
 })
 
-// REFRESHING THE ACCESS TOKEN
+let isRefreshing = false
+let refreshSubscribers = []
+
+function subscribeTokenRefresh(callback) {
+  refreshSubscribers.push(callback)
+}
+
+function onRefreshed() {
+  refreshSubscribers.forEach((callback) => callback())
+  refreshSubscribers = []
+}
+
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
