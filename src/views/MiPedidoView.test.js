@@ -33,4 +33,11 @@ describe('MiPedidoView', () => {
 
     expect(wrapper.findComponent(OrderHistorySection).exists()).toBe(true)
   })
+  
+  it('wraps the ticket and the history in the container with side margins', async () => {
+    const wrapper = mount(MiPedidoView)
+    await flushPromises()
+
+    expect(wrapper.find('main').classes()).toContain('mi-pedido-view')
+  })
 })

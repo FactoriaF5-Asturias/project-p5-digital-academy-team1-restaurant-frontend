@@ -1,8 +1,18 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useOnTheWayOrders } from '../composables/useOnTheWayOrders'
+import ConfirmDialog from './ConfirmDialog.vue'
 
-const { orders, isLoading, error, fetchOrders, deliverOrder } = useOnTheWayOrders()
+const {
+  orders,
+  isLoading,
+  error,
+  orderToConfirm,
+  fetchOrders,
+  deliverOrder,
+  confirmCashCollected,
+  cancelCashConfirmation,
+} = useOnTheWayOrders()
 
 onMounted(fetchOrders)
 
@@ -52,8 +62,20 @@ const PAYMENT_METHOD_LABELS = {
         >
           Marcar como ENTREGADO
         </button>
-      </li>
+            </li>
     </ul>
+
+    <ConfirmDialog
+      v-if="orderToConfirm"
+      title="Confirmar cobro"
+      confirm-label="Sí, cobrado"
+      variant="success"
+      @confirm="confirmCashCollected"
+      @cancel="cancelCashConfirmation"
+    >
+      ¿Se han cobrado <strong>{{ formatCurrency(orderToConfirm.total) }}</strong> en efectivo
+      por el pedido <strong>#{{ orderToConfirm.id }}</strong>?
+    </ConfirmDialog>
   </section>
 </template>
 

@@ -40,8 +40,11 @@ function isLocked(user) {
   return isCurrentUser(user) || user.id === props.pendingUserId
 }
 
+// El desplegable vuelve al rol actual: el nuevo solo se ve cuando el padre
+// lo confirme y el backend lo guarde (así, si se cancela, no queda cambiado).
 function handleRoleChange(user, event) {
   const role = event.target.value
+  event.target.value = getRole(user)
   if (role !== getRole(user)) emit('change-role', user, role)
 }
 </script>

@@ -68,6 +68,16 @@ describe('UsersTable', () => {
     expect(wrapper.emitted('change-role')[0]).toEqual([COOK, 'ROLE_DELIVERYMAN'])
   })
 
+  
+  it('deja el rol actual en el desplegable hasta que el padre lo cambie', async () => {
+    const wrapper = mountTable()
+    const select = getRow(wrapper, 1).find('select')
+
+    await select.setValue('ROLE_DELIVERYMAN')
+
+    expect(select.element.value).toBe('ROLE_COOK')
+  })
+
   it('el botón dice "Activar" o "Desactivar" según el estado y avisa al pulsarlo', async () => {
     const wrapper = mountTable({ users: [COOK, { ...COOK, id: 'x', active: true }] })
     const [inactiveButton] = getRow(wrapper, 0).findAll('button')

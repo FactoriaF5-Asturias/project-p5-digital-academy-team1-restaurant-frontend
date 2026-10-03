@@ -2,6 +2,8 @@
 // Diálogo genérico de confirmación (por ejemplo, antes de borrar algo).
 // El texto del mensaje llega por el slot por defecto, así el padre puede
 // resaltar partes (como el nombre del producto). Solo emite confirm o cancel.
+// variant: 'danger' (rojo) para quitar, borrar o desactivar;
+// 'success' (verde) para confirmar algo positivo, como un cobro.
 defineProps({
   title: {
     type: String,
@@ -15,13 +17,25 @@ defineProps({
     type: String,
     default: 'Cancelar',
   },
+  variant: {
+    type: String,
+    default: 'danger',
+    validator: (value) => ['danger', 'success'].includes(value),
+  },
 })
 
 const emit = defineEmits(['confirm', 'cancel'])
 </script>
 
 <template>
-  <div class="confirm-dialog" role="dialog" aria-modal="true" :aria-label="title">
+  <!-- Clic en el fondo oscuro = cancelar -->
+  <div
+    class="confirm-dialog"
+    role="dialog"
+    aria-modal="true"
+    :aria-label="title"
+    @click.self="emit('cancel')"
+  >
     <div class="confirm-dialog__box">
       <h3 class="confirm-dialog__title">{{ title }}</h3>
 
@@ -35,7 +49,7 @@ const emit = defineEmits(['confirm', 'cancel'])
         </button>
         <button
           type="button"
-          class="confirm-dialog__button confirm-dialog__button--danger"
+          :class="['confirm-dialog__button', `confirm-dialog__button--${variant}`]"
           @click="emit('confirm')"
         >
           {{ confirmLabel }}
@@ -74,5 +88,9 @@ const emit = defineEmits(['confirm', 'cancel'])
 
 .confirm-dialog__button--danger {
   @apply bg-error text-white border-error hover:bg-error hover:opacity-90;
+}
+
+.confirm-dialog__button--success {
+  @apply bg-secondary text-white border-secondary hover:bg-secondary hover:opacity-90;
 }
 </style>

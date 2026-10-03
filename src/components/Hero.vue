@@ -1,8 +1,14 @@
 <script setup>
+import { computed } from 'vue'
 import heroImage from '../assets/hero.jfif'
 import { useAuthStore } from '../stores/auth'
+import { ROLES } from '../constants/roles'
 
 const authStore = useAuthStore()
+
+// "Seguir mi pedido" solo tiene sentido para el cliente con sesión:
+// admin, cocina y reparto no hacen pedidos y no tienen acceso a /mi-pedido.
+const canTrackOrder = computed(() => authStore.role === ROLES.CUSTOMER)
 
 function scrollToCarta() {
   document.getElementById('productos-carta')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -38,7 +44,7 @@ function scrollToCarta() {
           </button>
 
           <router-link
-            v-if="authStore.isAuthenticated"
+            v-if="canTrackOrder"
             :to="{ name: 'mi-pedido' }"
             class="border border-outline text-on-surface px-6 py-3 rounded-lg font-semibold text-center hover:bg-surface-container-high transition"
           >

@@ -2,14 +2,19 @@ import { ref } from 'vue'
 import { getOrdersByStatus } from '../services/orders.service'
 import { markOrderAsDelivered } from '../services/delivery.service'
 
+const CASH_ON_DELIVERY = 'CASH_ON_DELIVERY'
+
 // Lista provisional de pedidos "en tránsito": mientras no exista la
 // asignación real de repartidor ni la acción de marcarlos "en
 // tránsito", se piden todos los pedidos en ese estado con el
 // endpoint genérico de pedidos, sin filtrar por repartidor asignado.
+// Los pedidos en efectivo esperan a que el repartidor confirme el cobro.
 export function useOnTheWayOrders() {
   const orders = ref([])
   const isLoading = ref(true)
   const error = ref(null)
+  // Pedido en efectivo pendiente de confirmar el cobro.
+  const orderToConfirm = ref(null)
 
   async function fetchOrders() {
     isLoading.value = true
@@ -25,17 +30,10 @@ export function useOnTheWayOrders() {
     }
   }
 
-  async function deliverOrder(order) {
-    if (order.paymentMethod === 'CASH_ON_DELIVERY') {
-      const confirmed = window.confirm(
-        `¿Confirmas que se han cobrado ${order.total.toFixed(2)} € en efectivo por el pedido #${order.id}?`,
-      )
-      if (!confirmed) return
-    }
-
+  async function markDelivered(order) {
     try {
       await markOrderAsDelivered(order.id, {
-        cashCollected: order.paymentMethod === 'CASH_ON_DELIVERY',
+        cashCollected: order.paymentMethod === CASH_ON_DELIVERY,
       })
       orders.value = orders.value.filter((item) => item.id !== order.id)
     } catch (err) {
@@ -44,5 +42,32 @@ export function useOnTheWayOrders() {
     }
   }
 
-  return { orders, isLoading, error, fetchOrders, deliverOrder }
+  function deliverOrder(order) {
+    if (order.paymentMethod === CASH_ON_DELIVERY) {
+      orderToConfirm.value = order
+      return
+    }
+    return markDelivered(order)
+  }
+
+  function confirmCashCollected() {
+    const order = orderToConfirm.value
+    orderToConfirm.value = null
+    return markDelivered(order)
+  }
+
+  function cancelCashConfirmation() {
+    orderToConfirm.value = null
+  }
+
+  return {
+    orders,
+    isLoading,
+    error,
+    orderToConfirm,
+    fetchOrders,
+    deliverOrder,
+    confirmCashCollected,
+    cancelCashConfirmation,
+  }
 }

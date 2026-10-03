@@ -54,12 +54,11 @@ describe("OnTheWayOrdersList", () => {
     expect(wrapper.text()).toContain("21,50");
   });
 
-  it("marks an online-card order as delivered without asking for cash confirmation", async () => {
+    it("marks an online-card order as delivered without asking for cash confirmation", async () => {
     vi.spyOn(ordersService, "getOrdersByStatus").mockResolvedValue([
       { id: 12, paymentMethod: "ONLINE_CARD", total: 21.5 },
     ]);
     vi.spyOn(deliveryService, "markOrderAsDelivered").mockResolvedValue({});
-    const confirmSpy = vi.spyOn(window, "confirm");
 
     const wrapper = mount(OnTheWayOrdersList);
     await flushPromises();
@@ -67,46 +66,66 @@ describe("OnTheWayOrdersList", () => {
     await wrapper.find(".on-the-way-orders__deliver-btn").trigger("click");
     await flushPromises();
 
-    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(wrapper.find(".confirm-dialog").exists()).toBe(false);
     expect(deliveryService.markOrderAsDelivered).toHaveBeenCalledWith(12, {
       cashCollected: false,
     });
     expect(wrapper.text()).toContain("No hay pedidos en tránsito ahora mismo.");
   });
 
-  it("asks for cash confirmation before marking a cash-on-delivery order as delivered", async () => {
+  it("opens the green confirm dialog with the amount and order before a cash delivery", async () => {
     vi.spyOn(ordersService, "getOrdersByStatus").mockResolvedValue([
       { id: 13, paymentMethod: "CASH_ON_DELIVERY", total: 30 },
     ]);
     vi.spyOn(deliveryService, "markOrderAsDelivered").mockResolvedValue({});
-    vi.spyOn(window, "confirm").mockReturnValue(true);
 
     const wrapper = mount(OnTheWayOrdersList);
     await flushPromises();
 
     await wrapper.find(".on-the-way-orders__deliver-btn").trigger("click");
+
+    const dialog = wrapper.find(".confirm-dialog");
+    expect(dialog.exists()).toBe(true);
+    expect(dialog.text()).toContain("30,00");
+    expect(dialog.text()).toContain("#13");
+    expect(dialog.find(".confirm-dialog__button--success").text()).toBe("Sí, cobrado");
+    expect(deliveryService.markOrderAsDelivered).not.toHaveBeenCalled();
+  });
+
+  it("marks the cash order as delivered when the cash is confirmed", async () => {
+    vi.spyOn(ordersService, "getOrdersByStatus").mockResolvedValue([
+      { id: 13, paymentMethod: "CASH_ON_DELIVERY", total: 30 },
+    ]);
+    vi.spyOn(deliveryService, "markOrderAsDelivered").mockResolvedValue({});
+
+    const wrapper = mount(OnTheWayOrdersList);
     await flushPromises();
 
-    expect(window.confirm).toHaveBeenCalled();
+    await wrapper.find(".on-the-way-orders__deliver-btn").trigger("click");
+    await wrapper.find(".confirm-dialog__button--success").trigger("click");
+    await flushPromises();
+
     expect(deliveryService.markOrderAsDelivered).toHaveBeenCalledWith(13, {
       cashCollected: true,
     });
+    expect(wrapper.find(".confirm-dialog").exists()).toBe(false);
   });
 
-  it("does not mark the order as delivered when cash confirmation is declined", async () => {
+  it("does not mark the order as delivered when the cash confirmation is cancelled", async () => {
     vi.spyOn(ordersService, "getOrdersByStatus").mockResolvedValue([
       { id: 13, paymentMethod: "CASH_ON_DELIVERY", total: 30 },
     ]);
     vi.spyOn(deliveryService, "markOrderAsDelivered");
-    vi.spyOn(window, "confirm").mockReturnValue(false);
 
     const wrapper = mount(OnTheWayOrdersList);
     await flushPromises();
 
     await wrapper.find(".on-the-way-orders__deliver-btn").trigger("click");
+    await wrapper.findAll(".confirm-dialog__button")[0].trigger("click");
     await flushPromises();
 
     expect(deliveryService.markOrderAsDelivered).not.toHaveBeenCalled();
+    expect(wrapper.find(".confirm-dialog").exists()).toBe(false);
     expect(wrapper.text()).toContain("Pedido #13");
   });
 });

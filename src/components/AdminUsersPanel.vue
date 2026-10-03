@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useAdminUsers } from '../composables/useAdminUsers'
 import { useAuthStore } from '../stores/auth'
+import { getRoleLabel } from '../constants/roles'
 import ConfirmDialog from './ConfirmDialog.vue'
 import LoadingSpinner from './LoadingSpinner.vue'
 import PaginationControl from './PaginationControl.vue'
@@ -9,8 +10,8 @@ import UserFormModal from './UserFormModal.vue'
 import UsersTable from './UsersTable.vue'
 
 // Responsabilidad: coordinar la sección "Gestión de usuarios". Une la tabla,
-// la paginación, la ventana de edición y las confirmaciones (desactivar y
-// eliminar) con el estado de useAdminUsers.
+// la paginación, la ventana de edición y las confirmaciones (cambiar rol,
+// desactivar y eliminar) con el estado de useAdminUsers.
 
 const EDIT_ERROR_MESSAGE =
   'No se han podido guardar los datos. Revisa que el email no lo use otra cuenta.'
@@ -64,20 +65,33 @@ async function handleEditSubmit(changes) {
 
 // Acciones que piden confirmación antes de ejecutarse.
 const CONFIRMATIONS = Object.freeze({
+  changeRole: {
+    getTitle: (name) => `¿Estás seguro de cambiar el rol de ${name}?`,
+    getMessage: ({ user, role }) =>
+      `Pasará de ${getRoleLabel(user.roles?.[0])} a ${getRoleLabel(role)} y sus permisos cambiarán al momento.`,
+    confirmLabel: 'Cambiar rol',
+  },
   deactivate: {
     getTitle: (name) => `¿Estás seguro de desactivar a ${name}?`,
-    message: 'No podrá iniciar sesión hasta que lo vuelvas a activar.',
+    getMessage: () => 'No podrá iniciar sesión hasta que lo vuelvas a activar.',
     confirmLabel: 'Desactivar',
   },
   delete: {
     getTitle: (name) => `¿Estás seguro de eliminar a ${name}?`,
-    message:
+    getMessage: () =>
       'Se borrará su cuenta y no se puede deshacer. Si solo quieres impedir que entre, desactívala.',
     confirmLabel: 'Eliminar',
   },
 })
 
-// { action: 'deactivate' | 'delete', user } mientras se espera la respuesta del admin.
+// Qué se ejecuta cuando el admin acepta cada confirmación.
+const CONFIRMED_ACTIONS = Object.freeze({
+  changeRole: ({ user, role }) => changeRole(user, role),
+  deactivate: ({ user }) => toggleActive(user),
+  delete: ({ user }) => removeUser(user),
+})
+
+// { action: 'changeRole' | 'deactivate' | 'delete', user, role? } mientras se espera la respuesta del admin.
 const pendingConfirmation = ref(null)
 
 const confirmation = computed(() => {
@@ -85,8 +99,16 @@ const confirmation = computed(() => {
   const { action, user } = pendingConfirmation.value
   const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
   const texts = CONFIRMATIONS[action]
-  return { title: texts.getTitle(fullName), message: texts.message, confirmLabel: texts.confirmLabel }
+  return {
+    title: texts.getTitle(fullName),
+    message: texts.getMessage(pendingConfirmation.value),
+    confirmLabel: texts.confirmLabel,
+  }
 })
+
+function handleRoleChangeRequest(user, role) {
+  pendingConfirmation.value = { action: 'changeRole', user, role }
+}
 
 // Activar no necesita confirmación; desactivar sí, porque deja al usuario sin acceso.
 function handleToggleActiveRequest(user) {
@@ -103,10 +125,9 @@ function handleConfirmationCancel() {
 }
 
 async function handleConfirmationAccept() {
-  const { action, user } = pendingConfirmation.value
+  const pending = pendingConfirmation.value
   pendingConfirmation.value = null
-  if (action === 'deactivate') await toggleActive(user)
-  else await removeUser(user)
+  await CONFIRMED_ACTIONS[pending.action](pending)
 }
 
 onMounted(loadUsers)
@@ -128,7 +149,7 @@ onMounted(loadUsers)
         :users="users"
         :current-user-id="currentUserId"
         :pending-user-id="pendingUserId"
-        @change-role="changeRole"
+        @change-role="handleRoleChangeRequest"
         @toggle-active="handleToggleActiveRequest"
         @edit="handleEditRequest"
         @delete="handleDeleteRequest"

@@ -45,10 +45,11 @@ describe('Hero', () => {
     expect(wrapper.findComponent(RouterLinkStub).exists()).toBe(false)
   })
 
-  it('el botón "Seguir mi pedido" enlaza a la ruta mi-pedido cuando hay sesión', () => {
+  it('el botón "Seguir mi pedido" enlaza a la ruta mi-pedido cuando entra un cliente', () => {
     const wrapper = mountHero()
     const authStore = useAuthStore()
     authStore.user = { id: 1 }
+    authStore.role = 'ROLE_CUSTOMER'
 
     return wrapper.vm.$nextTick().then(() => {
       const link = wrapper.findComponent(RouterLinkStub)
@@ -56,4 +57,17 @@ describe('Hero', () => {
       expect(link.text()).toBe('Seguir mi pedido')
     })
   })
+
+  it.each(['ROLE_ADMIN', 'ROLE_COOK', 'ROLE_DELIVERYMAN'])(
+    'no muestra el botón "Seguir mi pedido" con el rol %s',
+    async (role) => {
+      const wrapper = mountHero()
+      const authStore = useAuthStore()
+      authStore.user = { id: 1 }
+      authStore.role = role
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.findComponent(RouterLinkStub).exists()).toBe(false)
+    }
+  )
 })

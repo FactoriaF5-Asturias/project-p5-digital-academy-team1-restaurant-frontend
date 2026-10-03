@@ -1,12 +1,18 @@
 <script setup>
+import { ref } from 'vue'
 import { useCartStore } from '../stores/cart'
 import { useCheckoutStore } from '../stores/checkout'
 import { HOME_DELIVERY_FEE } from '../constants/delivery'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 // El widget "Tu pedido": lee y opera directamente sobre el store global de la cesta.
 // No recibe props ni emite eventos porque el store es la única fuente de verdad.
+// Antes de quitar un producto pide confirmación con la ventana de la app.
 const cartStore = useCartStore()
 const checkoutStore = useCheckoutStore()
+
+// Línea que se quiere quitar mientras se espera la respuesta del usuario.
+const lineToRemove = ref(null)
 
 const formatCurrency = (value) =>
   value.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })
@@ -15,19 +21,26 @@ function handleIncrease(productId) {
   cartStore.incrementQuantity(productId)
 }
 
+// Con 1 unidad, bajar la cantidad es quitar el producto: se pide confirmación.
 function handleDecrease(line) {
   if (line.quantity === 1) {
-    const confirmed = window.confirm(`¿Quitar "${line.product.name}" de la cesta?`)
-    if (!confirmed) return
+    lineToRemove.value = line
+    return
   }
   cartStore.decrementQuantity(line.product.id)
 }
 
 function handleRemove(line) {
-  const confirmed = window.confirm(`¿Quitar "${line.product.name}" de la cesta?`)
-  if (confirmed) {
-    cartStore.removeProduct(line.product.id)
-  }
+  lineToRemove.value = line
+}
+
+function handleRemoveCancel() {
+  lineToRemove.value = null
+}
+
+function handleRemoveConfirm() {
+  cartStore.removeProduct(lineToRemove.value.product.id)
+  lineToRemove.value = null
 }
 </script>
 
@@ -127,8 +140,19 @@ function handleRemove(line) {
             )
           }}</dd>
         </div>
-      </dl>
+            </dl>
     </template>
+
+    <ConfirmDialog
+      v-if="lineToRemove"
+      title="Quitar producto"
+      confirm-label="Quitar"
+      @confirm="handleRemoveConfirm"
+      @cancel="handleRemoveCancel"
+    >
+      <template v-if="lineToRemove.quantity === 1">Solo queda 1 unidad. </template>
+      ¿Quitar <strong>"{{ lineToRemove.product.name }}"</strong> de la cesta?
+    </ConfirmDialog>
   </section>
 </template>
 

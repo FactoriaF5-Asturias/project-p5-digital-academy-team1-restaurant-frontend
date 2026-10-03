@@ -82,6 +82,35 @@ describe('AdminUsersPanel', () => {
     expect(wrapper.find('.pagination-control').exists()).toBe(false)
   })
 
+    it('pide confirmación antes de cambiar el rol y no cambia nada si se cancela', async () => {
+    const wrapper = await mountPanel()
+    const select = wrapper.findAll('tbody tr')[1].find('select')
+
+    await select.setValue('ROLE_COOK')
+
+    const dialog = wrapper.find('[role="dialog"]')
+    expect(dialog.text()).toContain('¿Estás seguro de cambiar el rol de Laura Gómez?')
+    expect(dialog.text()).toContain('Pasará de Cliente a Cocina')
+
+    await wrapper.find('.confirm-dialog__button').trigger('click')
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+    expect(updateUser).not.toHaveBeenCalled()
+    expect(select.element.value).toBe('ROLE_CUSTOMER')
+  })
+
+  it('cambia el rol al confirmar y muestra el nuevo rol', async () => {
+    updateUser.mockResolvedValue({ ...CUSTOMER, roles: ['ROLE_COOK'] })
+    const wrapper = await mountPanel()
+
+    await wrapper.findAll('tbody tr')[1].find('select').setValue('ROLE_COOK')
+    await wrapper.find('.confirm-dialog__button--danger').trigger('click')
+    await flushPromises()
+
+    expect(updateUser).toHaveBeenCalledWith('customer-id', { role: 'ROLE_COOK' })
+    expect(wrapper.findAll('tbody tr')[1].find('select').element.value).toBe('ROLE_COOK')
+  })
+
   it('pide confirmación antes de desactivar y no cambia nada si se cancela', async () => {
     const wrapper = await mountPanel()
 

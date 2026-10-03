@@ -65,6 +65,25 @@ async function handleToggleAvailability(product) {
   }
 }
 
+// --- Desactivar producto ---
+// Activar no necesita confirmación; desactivar sí, porque lo quita de la carta.
+const productToDeactivate = ref(null)
+
+function requestToggleAvailability(product) {
+  if (!product.available) return handleToggleAvailability(product)
+  productToDeactivate.value = product
+}
+
+function cancelDeactivate() {
+  productToDeactivate.value = null
+}
+
+function confirmDeactivate() {
+  const product = productToDeactivate.value
+  productToDeactivate.value = null
+  return handleToggleAvailability(product)
+}
+
 // --- Eliminar producto ---
 const productToDelete = ref(null)
 
@@ -166,7 +185,7 @@ async function handleFormSubmit(formData) {
     <div v-else class="admin-products__table-wrapper">
       <AdminProductsTable
         :products="paginatedProducts"
-        @toggle-availability="handleToggleAvailability"
+        @toggle-availability="requestToggleAvailability"
         @edit="openEditForm"
         @delete="requestDelete"
       />
@@ -178,6 +197,18 @@ async function handleFormSubmit(formData) {
         @change-page="goToPage"
       />
     </div>
+
+        <!-- Confirmación de desactivar -->
+    <ConfirmDialog
+      v-if="productToDeactivate"
+      title="¿Desactivar producto?"
+      confirm-label="Desactivar"
+      @confirm="confirmDeactivate"
+      @cancel="cancelDeactivate"
+    >
+      <strong>{{ productToDeactivate.name }}</strong> dejará de aparecer en la carta y los
+      clientes no podrán pedirlo hasta que lo vuelvas a activar.
+    </ConfirmDialog>
 
     <!-- Confirmación de borrado -->
     <ConfirmDialog

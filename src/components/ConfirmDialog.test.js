@@ -54,4 +54,34 @@ describe('ConfirmDialog', () => {
     expect(wrapper.emitted('cancel')).toHaveLength(1)
     expect(wrapper.emitted('confirm')).toBeUndefined()
   })
+
+
+  it('uses the red danger style by default', () => {
+    const confirmButton = findButtons(mountDialog())[1]
+
+    expect(confirmButton.classes()).toContain('confirm-dialog__button--danger')
+  })
+
+  it('uses the green success style when variant is success', () => {
+    const confirmButton = findButtons(mountDialog({ variant: 'success' }))[1]
+
+    expect(confirmButton.classes()).toContain('confirm-dialog__button--success')
+    expect(confirmButton.classes()).not.toContain('confirm-dialog__button--danger')
+  })
+
+  it('emits cancel when clicking the dark background', async () => {
+    const wrapper = mountDialog()
+
+    await wrapper.find('.confirm-dialog').trigger('click')
+
+    expect(wrapper.emitted('cancel')).toHaveLength(1)
+  })
+
+  it('does not emit cancel when clicking inside the box', async () => {
+    const wrapper = mountDialog()
+
+    await wrapper.find('.confirm-dialog__box').trigger('click')
+
+    expect(wrapper.emitted('cancel')).toBeUndefined()
+  })
 })

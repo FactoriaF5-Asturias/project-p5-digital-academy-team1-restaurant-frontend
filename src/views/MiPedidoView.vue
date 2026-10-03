@@ -31,7 +31,7 @@ const order = {
 </script>
 
 <template>
-  <main>
+    <main class="mi-pedido-view">
 
     <OrderTicket
       :order-number="order.orderNumber"
@@ -46,3 +46,12 @@ const order = {
     <OrderHistorySection v-if="authStore.isAuthenticated" />
   </main>
 </template>
+
+<style scoped>
+@reference "../style.css";
+
+/* Mismo ancho máximo que el ticket y margen lateral para que no toque los bordes en móvil */
+.mi-pedido-view {
+  @apply max-w-4xl mx-auto px-4 sm:px-6 pb-8;
+}
+</style>

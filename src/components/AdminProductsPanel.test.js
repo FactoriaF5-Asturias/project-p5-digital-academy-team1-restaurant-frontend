@@ -147,18 +147,49 @@ describe('AdminProductsPanel', () => {
     })
   })
 
-  describe('activating and deactivating', () => {
-    it('saves the new availability and updates the row', async () => {
+    describe('activating and deactivating', () => {
+    it('asks for confirmation before deactivating and changes nothing when cancelling', async () => {
+      const wrapper = await mountPanel()
+      const row = findRowByName(wrapper, 'React Roll')
+
+      await row.find('.products-table__toggle-button').trigger('click')
+
+      expect(wrapper.find('.confirm-dialog').text()).toContain('¿Desactivar producto?')
+      expect(wrapper.find('.confirm-dialog strong').text()).toBe('React Roll')
+
+      await wrapper.findAll('.confirm-dialog__button')[0].trigger('click')
+
+      expect(wrapper.find('.confirm-dialog').exists()).toBe(false)
+      expect(updateProduct).not.toHaveBeenCalled()
+    })
+
+    it('saves the new availability and updates the row after confirming', async () => {
       updateProduct.mockResolvedValue(buildProduct({ id: 1, available: false }))
       const wrapper = await mountPanel()
       const row = findRowByName(wrapper, 'React Roll')
 
       await row.find('.products-table__toggle-button').trigger('click')
+      await wrapper.find('.confirm-dialog__button--danger').trigger('click')
       await flushPromises()
 
       expect(updateProduct).toHaveBeenCalledWith(1, { available: false })
       expect(row.text()).toContain('Desactivado')
       expect(row.find('.products-table__toggle-button').text()).toBe('Activar')
+    })
+
+    it('activates without asking for confirmation', async () => {
+      updateProduct.mockResolvedValue(
+        buildProduct({ id: 3, name: 'Sake Script', category: 'BEBIDAS', available: true })
+      )
+      const wrapper = await mountPanel()
+      const row = findRowByName(wrapper, 'Sake Script')
+
+      await row.find('.products-table__toggle-button').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.find('.confirm-dialog').exists()).toBe(false)
+      expect(updateProduct).toHaveBeenCalledWith(3, { available: true })
+      expect(row.find('.products-table__toggle-button').text()).toBe('Desactivar')
     })
 
     it('shows an error and keeps the row unchanged when the backend fails', async () => {
@@ -167,6 +198,7 @@ describe('AdminProductsPanel', () => {
       const row = findRowByName(wrapper, 'React Roll')
 
       await row.find('.products-table__toggle-button').trigger('click')
+      await wrapper.find('.confirm-dialog__button--danger').trigger('click')
       await flushPromises()
 
       expect(wrapper.find('.admin-products__action-error').text()).toBe(

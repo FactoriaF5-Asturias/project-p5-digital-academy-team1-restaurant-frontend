@@ -4,10 +4,16 @@ import ProductImage from './ProductImage.vue'
 
 // Recibe un producto y emite add-to-cart con la cantidad elegida.
 // No conoce el store de la cesta (eso llega en otra parte): queda desacoplado.
+// Con readonly solo muestra el plato (foto, nombre, descripción y precio),
+// sin cantidad ni botón "Añadir": lo decide quien la usa, según el rol.
 const props = defineProps({
   product: {
     type: Object,
     required: true,
+  },
+  readonly: {
+    type: Boolean,
+    default: false,
   },
 })
 
@@ -78,7 +84,7 @@ onUnmounted(() => {
       <p class="product-card__description">{{ product.description }}</p>
       <p class="product-card__price">{{ formattedPrice }}</p>
 
-      <div class="product-card__footer">
+      <div v-if="!readonly" class="product-card__footer">
         <div
           class="product-card__quantity"
           role="group"
