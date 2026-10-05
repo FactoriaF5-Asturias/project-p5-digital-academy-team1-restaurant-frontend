@@ -1,9 +1,16 @@
-import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import { profileService } from '../../services/profileService'
 import ProfileForm from './ProfileForm.vue'
+
+vi.mock('../../services/profileService', () => ({
+  profileService: {
+    updateProfile: vi.fn(),
+  },
+}))
 
 const user = {
   id: 'test-user',
@@ -35,6 +42,7 @@ function mountForm({
 
   const authStore = useAuthStore()
   authStore.user = currentUser ? { ...currentUser } : null
+  authStore.role = currentUser?.roles?.[0] ?? null
   authStore.isFetchingUser = loading
 
   const wrapper = mount(ProfileForm, {
@@ -48,6 +56,10 @@ function mountForm({
 }
 
 describe('ProfileForm', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
   it('precarga los datos del usuario sin mostrar errores', () => {
     const { wrapper } = mountForm()
 
@@ -57,6 +69,7 @@ describe('ProfileForm', () => {
 
     expect(wrapper.findAll('.profile-form__error')).toHaveLength(0)
     expect(wrapper.text()).not.toContain('Tienes cambios sin guardar.')
+    expect(wrapper.get('.profile-form__submit').element.disabled).toBe(true)
   })
 
   it('detecta cambios sin modificar los datos del store', async () => {
@@ -97,7 +110,7 @@ describe('ProfileForm', () => {
       expect(wrapper.find(`#${field}-error`).exists()).toBe(false)
       expect(input.attributes('aria-invalid')).toBe('false')
       expect(input.attributes('aria-describedby')).toBeUndefined()
-    }
+    },
   )
 
   it('rechaza un email sin formato válido', async () => {
@@ -108,7 +121,7 @@ describe('ProfileForm', () => {
     await input.trigger('blur')
 
     expect(wrapper.get('#email-error').text()).toBe(
-      'Introduce un correo electrónico válido.'
+      'Introduce un correo electrónico válido.',
     )
 
     await input.setValue('nuevo@example.com')
@@ -134,20 +147,19 @@ describe('ProfileForm', () => {
     expect(wrapper.findAll('.profile-form__error')).toHaveLength(0)
     expect(wrapper.text()).not.toContain('Tienes cambios sin guardar.')
     expect(wrapper.find('.profile-form__reset').exists()).toBe(false)
+    expect(profileService.updateProfile).not.toHaveBeenCalled()
   })
 
-  it('mantiene el guardado deshabilitado aunque haya cambios válidos', async () => {
+  it('habilita el guardado cuando hay cambios válidos', async () => {
     const { wrapper } = mountForm()
 
     await wrapper.get('#city').setValue('Barcelona')
 
-    expect(wrapper.get('.profile-form__submit').element.disabled).toBe(true)
-    expect(wrapper.get('#profile-save-help').text()).toContain(
-      'El guardado de cambios estará disponible próximamente.'
-    )
+    expect(wrapper.get('.profile-form__submit').element.disabled).toBe(false)
+    expect(wrapper.find('#profile-save-help').exists()).toBe(false)
   })
 
-  it('valida todos los campos al enviar el formulario', async () => {
+  it('valida todos los campos al enviar y no llama al backend', async () => {
     const { wrapper } = mountForm()
 
     for (const field of fields) {
@@ -160,6 +172,7 @@ describe('ProfileForm', () => {
     await nextTick()
 
     expect(wrapper.findAll('.profile-form__error')).toHaveLength(6)
+    expect(profileService.updateProfile).not.toHaveBeenCalled()
   })
 
   it('enfoca el primer campo con error al enviar', async () => {
@@ -174,9 +187,8 @@ describe('ProfileForm', () => {
       await wrapper.get('form').trigger('submit')
       await nextTick()
 
-      expect(document.activeElement).toBe(
-        wrapper.get('#email').element
-      )
+      expect(document.activeElement).toBe(wrapper.get('#email').element)
+      expect(profileService.updateProfile).not.toHaveBeenCalled()
     } finally {
       wrapper.unmount()
     }
@@ -189,7 +201,7 @@ describe('ProfileForm', () => {
 
     expect(wrapper.find('form').exists()).toBe(false)
     expect(wrapper.text()).toContain(
-      'No hay datos de usuario disponibles.'
+      'No hay datos de usuario disponibles.',
     )
   })
 
@@ -211,6 +223,7 @@ describe('ProfileForm', () => {
 
     authStore.user = { ...user }
     authStore.isFetchingUser = false
+
     await nextTick()
 
     expect(wrapper.text()).not.toContain('Cargando tus datos…')
@@ -225,11 +238,12 @@ describe('ProfileForm', () => {
     })
 
     authStore.isFetchingUser = false
+
     await nextTick()
 
     expect(wrapper.text()).not.toContain('Cargando tus datos…')
     expect(wrapper.text()).toContain(
-      'No hay datos de usuario disponibles.'
+      'No hay datos de usuario disponibles.',
     )
     expect(wrapper.find('form').exists()).toBe(false)
   })
@@ -240,21 +254,152 @@ describe('ProfileForm', () => {
     await wrapper.get('#city').setValue('Barcelona')
 
     authStore.user = null
+
     await nextTick()
 
     expect(wrapper.find('form').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('Tienes cambios sin guardar.')
   })
 
-  it('no actualiza el store ni simula un guardado al enviar datos válidos', async () => {
+  it('guarda los campos editables y actualiza el store y el formulario', async () => {
     const { wrapper, authStore } = mountForm()
+
+    profileService.updateProfile.mockResolvedValue({
+      ...user,
+      city: 'Barcelona',
+    })
+
+    await wrapper.get('#city').setValue('  Barcelona  ')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(profileService.updateProfile).toHaveBeenCalledWith(
+      user.id,
+      {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        address: user.address,
+        postalCode: user.postalCode,
+        city: 'Barcelona',
+      },
+    )
+
+    expect(authStore.user.city).toBe('Barcelona')
+    expect(authStore.role).toBe('ROLE_CUSTOMER')
+    expect(wrapper.get('#city').element.value).toBe('Barcelona')
+    expect(wrapper.text()).toContain('Perfil actualizado correctamente.')
+    expect(wrapper.text()).not.toContain('Tienes cambios sin guardar.')
+    expect(wrapper.get('.profile-form__submit').element.disabled).toBe(true)
+  })
+
+  it('actualiza el email del store después de guardar', async () => {
+    const { wrapper, authStore } = mountForm()
+
+    profileService.updateProfile.mockResolvedValue({
+      ...user,
+      email: 'nuevo@example.com',
+    })
+
+    await wrapper.get('#email').setValue('nuevo@example.com')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(authStore.user.email).toBe('nuevo@example.com')
+    expect(wrapper.get('#email').element.value).toBe('nuevo@example.com')
+    expect(wrapper.text()).toContain('Perfil actualizado correctamente.')
+  })
+
+  it('conserva los cambios y el store si el correo está en uso', async () => {
+    const { wrapper, authStore } = mountForm()
+
+    profileService.updateProfile.mockRejectedValue({
+      response: { status: 409 },
+    })
+
+    await wrapper.get('#email').setValue('ocupado@example.com')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toContain(
+      'Ese correo ya está en uso',
+    )
+
+    expect(authStore.user.email).toBe(user.email)
+    expect(wrapper.get('#email').element.value).toBe('ocupado@example.com')
+    expect(wrapper.text()).toContain('Tienes cambios sin guardar.')
+    expect(wrapper.get('.profile-form__submit').element.disabled).toBe(false)
+    expect(wrapper.text()).not.toContain('Perfil actualizado correctamente.')
+  })
+
+  it('permite reintentar el guardado después de un error de red', async () => {
+    const { wrapper, authStore } = mountForm()
+
+    profileService.updateProfile
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockResolvedValueOnce({
+        ...user,
+        city: 'Barcelona',
+      })
 
     await wrapper.get('#city').setValue('Barcelona')
     await wrapper.get('form').trigger('submit')
+    await flushPromises()
 
-    expect(wrapper.findAll('.profile-form__error')).toHaveLength(0)
+    expect(wrapper.get('[role="alert"]').text()).toContain(
+      'No se pudo guardar el perfil',
+    )
     expect(authStore.user.city).toBe('Madrid')
-    expect(wrapper.text()).toContain('Tienes cambios sin guardar.')
+    expect(wrapper.get('.profile-form__submit').element.disabled).toBe(false)
+
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(profileService.updateProfile).toHaveBeenCalledTimes(2)
+    expect(authStore.user.city).toBe('Barcelona')
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Perfil actualizado correctamente.')
+  })
+
+  it('evita envíos duplicados y bloquea los campos mientras guarda', async () => {
+    let resolveSave
+
+    profileService.updateProfile.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSave = resolve
+      }),
+    )
+
+    const { wrapper } = mountForm()
+
+    await wrapper.get('#city').setValue('Barcelona')
+    await wrapper.get('form').trigger('submit')
+    await wrapper.get('form').trigger('submit')
+
+    expect(profileService.updateProfile).toHaveBeenCalledTimes(1)
+    expect(wrapper.get('fieldset').element.disabled).toBe(true)
     expect(wrapper.get('.profile-form__submit').element.disabled).toBe(true)
+    expect(wrapper.get('.profile-form__reset').element.disabled).toBe(true)
+    expect(wrapper.get('.profile-form__submit').text()).toBe('Guardando…')
+    expect(wrapper.get('.profile-form').attributes('aria-busy')).toBe('true')
+
+    resolveSave({
+      ...user,
+      city: 'Barcelona',
+    })
+
+    await flushPromises()
+
+    expect(wrapper.get('fieldset').element.disabled).toBe(false)
+    expect(wrapper.get('.profile-form').attributes('aria-busy')).toBe('false')
+    expect(wrapper.text()).toContain('Perfil actualizado correctamente.')
+  })
+
+  it('no llama al backend si no hay cambios', async () => {
+    const { wrapper } = mountForm()
+
+    await wrapper.get('form').trigger('submit')
+
+    expect(profileService.updateProfile).not.toHaveBeenCalled()
   })
 })
