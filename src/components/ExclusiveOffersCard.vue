@@ -19,7 +19,7 @@ function formatDate(isoDate) {
 
 async function handleCopyCoupon(offer) {
   try {
-    await navigator.clipboard.writeText(offer.couponCode)
+    await navigator.clipboard.writeText(offer.coupon)
     copiedOfferId.value = offer.id
     setTimeout(() => {
       if (copiedOfferId.value === offer.id) {
@@ -50,19 +50,19 @@ async function handleCopyCoupon(offer) {
         <li v-for="offer in offersStore.activeOffers" :key="offer.id" class="exclusive-offers__card">
           <div class="exclusive-offers__info">
             <p class="exclusive-offers__product">{{ offer.productName }}</p>
-            <p class="exclusive-offers__discount">{{ offer.discountPercentage }}% de descuento</p>
+            <p class="exclusive-offers__discount">{{ offer.discountRate }}% de descuento</p>
             <p v-if="offer.expiresAt" class="exclusive-offers__expiry">
               Válida hasta el {{ formatDate(offer.expiresAt) }}
             </p>
           </div>
 
           <button
-            v-if="offer.couponCode"
+            v-if="offer.coupon"
             type="button"
             class="exclusive-offers__copy-btn"
             @click="handleCopyCoupon(offer)"
           >
-            {{ copiedOfferId === offer.id ? '¡Copiado!' : `Copiar ${offer.couponCode}` }}
+            {{ copiedOfferId === offer.id ? '¡Copiado!' : `Copiar ${offer.coupon}` }}
           </button>
         </li>
       </ul>

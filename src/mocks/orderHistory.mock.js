@@ -7,36 +7,36 @@ const ALL_ORDERS = [
     id: 105,
     date: '2026-09-20T21:10:00',
     items: [
-      { productId: 3, name: 'Kaisen Init', quantity: 1, price: 6.5 },
-      { productId: 12, name: 'Gunkan Push', quantity: 2, price: 5.5 },
+      { productId: 3, name: 'Kaisen Init', quantity: 1, price: 6.5, available: true },
+      { productId: 12, name: 'Gunkan Push', quantity: 2, price: 5.5, available: true },
     ],
     total: 17.5,
   },
   {
     id: 104,
     date: '2026-09-15T20:30:00',
-    items: [{ productId: 27, name: 'Caesar Commit', quantity: 1, price: 6.9 }],
+    items: [{ productId: 27, name: 'Caesar Commit', quantity: 1, price: 6.9, available: false }],
     total: 6.9,
   },
   {
     id: 103,
     date: '2026-09-08T13:55:00',
     items: [
-      { productId: 5, name: 'Wakame Loop', quantity: 2, price: 4.5 },
-      { productId: 41, name: 'Gunkan Stack', quantity: 1, price: 5.9 },
+      { productId: 5, name: 'Wakame Loop', quantity: 2, price: 4.5, available: true },
+      { productId: 41, name: 'Gunkan Stack', quantity: 1, price: 5.9, available: false },
     ],
     total: 14.9,
   },
   {
     id: 102,
     date: '2026-08-30T21:40:00',
-    items: [{ productId: 1, name: 'Hello Edamame', quantity: 1, price: 3.5 }],
+    items: [{ productId: 1, name: 'Hello Edamame', quantity: 1, price: 3.5, available: true }],
     total: 3.5,
   },
   {
     id: 101,
     date: '2026-08-22T14:05:00',
-    items: [{ productId: 12, name: 'Gunkan Push', quantity: 1, price: 5.5 }],
+    items: [{ productId: 12, name: 'Gunkan Push', quantity: 1, price: 5.5, available: true }],
     total: 5.5,
   },
 ]

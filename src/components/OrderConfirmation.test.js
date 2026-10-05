@@ -93,12 +93,12 @@ describe("OrderConfirmation", () => {
     const { wrapper, cartStore } = await mountOrderConfirmation();
     const offersStore = useExclusiveOffersStore();
     offersStore.offers = [
-      { productId: 1, discountPercentage: 15, expiresAt: null },
+      { productId: 1, finalPrice: 8.5, discountRate: 15, expiresAt: null },
     ];
     cartStore.addProduct({ id: 1, name: "Salmon Roll", price: 10 });
     await flushPromises();
 
-    // 10 € * 15% = 1,50 € de descuento
+    // 10 € - 8,5 € = 1,50 € de descuento
     expect(wrapper.find(".order-confirmation__row--discount").text()).toContain(
       "1.50",
     );

@@ -12,7 +12,7 @@ function buildResult(overrides = {}) {
       {
         id: 101,
         date: '2026-09-20T21:10:00',
-        items: [{ productId: 3, name: 'Kaisen Init', quantity: 2, price: 6.5 }],
+        items: [{ productId: 3, name: 'Kaisen Init', quantity: 2, price: 6.5, available: true }],
         total: 13,
       },
     ],
@@ -113,6 +113,67 @@ describe('OrderHistorySection', () => {
 
   it('adds each line of the repeated order to the cart with its original quantity', async () => {
     vi.spyOn(orderHistoryMock, 'getOrderHistory').mockResolvedValue(buildResult())
+    const { wrapper, cartStore } = await mountOrderHistorySection()
+    await flushPromises()
+
+    await wrapper.find('.order-history__repeat-btn').trigger('click')
+
+    expect(cartStore.items).toEqual([
+      {
+        product: { id: 3, name: 'Kaisen Init', price: 6.5 },
+        quantity: 2,
+      },
+    ])
+  })
+
+  it('does not show the unavailable-products warning when every item is available', async () => {
+    vi.spyOn(orderHistoryMock, 'getOrderHistory').mockResolvedValue(buildResult())
+    const { wrapper } = await mountOrderHistorySection()
+
+    await flushPromises()
+
+    expect(wrapper.find('.order-history__unavailable-warning').exists()).toBe(false)
+  })
+
+  it('shows a warning when an order includes an unavailable product', async () => {
+    vi.spyOn(orderHistoryMock, 'getOrderHistory').mockResolvedValue(
+      buildResult({
+        items: [
+          {
+            id: 101,
+            date: '2026-09-20T21:10:00',
+            items: [
+              { productId: 3, name: 'Kaisen Init', quantity: 2, price: 6.5, available: true },
+              { productId: 27, name: 'Caesar Commit', quantity: 1, price: 6.9, available: false },
+            ],
+            total: 19.9,
+          },
+        ],
+      }),
+    )
+    const { wrapper } = await mountOrderHistorySection()
+
+    await flushPromises()
+
+    expect(wrapper.find('.order-history__unavailable-warning').exists()).toBe(true)
+  })
+
+  it('excludes unavailable products from the cart when repeating an order', async () => {
+    vi.spyOn(orderHistoryMock, 'getOrderHistory').mockResolvedValue(
+      buildResult({
+        items: [
+          {
+            id: 101,
+            date: '2026-09-20T21:10:00',
+            items: [
+              { productId: 3, name: 'Kaisen Init', quantity: 2, price: 6.5, available: true },
+              { productId: 27, name: 'Caesar Commit', quantity: 1, price: 6.9, available: false },
+            ],
+            total: 19.9,
+          },
+        ],
+      }),
+    )
     const { wrapper, cartStore } = await mountOrderHistorySection()
     await flushPromises()
 

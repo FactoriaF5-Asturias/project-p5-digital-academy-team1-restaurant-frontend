@@ -2,8 +2,8 @@
 import LoginForm from '../components/auth/LoginForm.vue'
 </script>
 <template>
-  <main class="min-h-screen bg-surface text-on-surface">
-    <section class="mx-auto flex min-h-screen max-w-md items-center px-6 py-12">
+<main class="bg-surface text-on-surface">
+    <section class="mx-auto flex max-w-md items-center px-6 py-16">
       <div class="w-full">
         <h1 class="text-3xl font-bold">
           Iniciar sesión

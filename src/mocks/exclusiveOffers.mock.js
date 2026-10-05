@@ -1,27 +1,30 @@
 // src/mocks/exclusiveOffers.mock.js
-// Simula temporalmente el futuro endpoint de ofertas exclusivas (todavía no existe en el backend).
-// Se sustituirá por la llamada real en cuanto el backend lo publique.
+// Simula temporalmente el endpoint real de ofertas exclusivas (GET /api/v1/offers, privado).
+// Se sustituirá por la llamada real en cuanto el backend lo publique en una rama.
 
 const EXCLUSIVE_OFFERS = [
   {
     id: 'offer-1',
     productId: 1,
     productName: 'Hello Edamame',
-    discountPercentage: 15,
+    originalPrice: 6.5,
+    finalPrice: 5.53,
+    discountRate: 15,
     expiresAt: null,
-    couponCode: null,
+    coupon: null,
   },
   {
     id: 'offer-2',
     productId: 3,
     productName: 'Kaisen Init',
-    discountPercentage: 20,
+    originalPrice: 12.5,
+    finalPrice: 10,
+    discountRate: 20,
     expiresAt: '2026-12-31T23:59:59',
-    couponCode: 'KAISEN20',
+    coupon: 'KAISEN20',
   },
 ]
 
-// Simula la respuesta real del backend: ofertas desbloqueadas para el usuario autenticado.
 export function getExclusiveOffers() {
   return new Promise((resolve) => {
     setTimeout(() => {

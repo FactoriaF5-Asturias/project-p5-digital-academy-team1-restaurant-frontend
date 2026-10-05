@@ -5,7 +5,7 @@
 // The GitHub icon + "Name (@username)" pattern below is the one to reuse.
 const leftDevs = [
   { name: 'Andrea', username: 'andreaperezgon' },
-  { name: 'Danil', username: 'danielmuntyanu' },
+  { name: 'Daniel', username: 'danielmuntyanu' },
   { name: 'Ioana', username: 'Alexapop' },
   { name: 'Jose', username: 'Josecgh' },
 ]

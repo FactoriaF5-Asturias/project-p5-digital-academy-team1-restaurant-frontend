@@ -26,8 +26,14 @@ function handleShowAll() {
   showAll.value = true
 }
 
+function hasUnavailableItems(order) {
+  return order.items.some((item) => !item.available)
+}
+
 function handleRepeatOrder(order) {
-  for (const item of order.items) {
+  const availableItems = order.items.filter((item) => item.available)
+
+  for (const item of availableItems) {
     const product = { id: item.productId, name: item.name, price: item.price }
     cartStore.addProduct(product)
     for (let i = 1; i < item.quantity; i++) {
@@ -76,6 +82,14 @@ function summarizeItems(items) {
             </div>
 
             <p class="order-history__summary">{{ summarizeItems(order.items) }}</p>
+
+            <p
+              v-if="hasUnavailableItems(order)"
+              class="order-history__unavailable-warning"
+              role="status"
+            >
+              Algún producto de este pedido ya no está disponible y no se añadirá al repetirlo.
+            </p>
 
             <button
               type="button"
@@ -148,6 +162,10 @@ function summarizeItems(items) {
 
 .order-history__summary {
   @apply text-sm text-on-surface-variant;
+}
+
+.order-history__unavailable-warning {
+  @apply text-sm text-error;
 }
 
 .order-history__repeat-btn {

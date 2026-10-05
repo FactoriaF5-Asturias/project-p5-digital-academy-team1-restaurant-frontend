@@ -29,8 +29,9 @@ export const useCartStore = defineStore("cart", {
       const offersStore = useExclusiveOffersStore();
 
       return state.items.map((item) => {
-        const discountPercentage = offersStore.discountForProduct(item.product.id);
-        const unitPrice = item.product.price * (1 - discountPercentage / 100);
+        const offer = offersStore.offerForProduct(item.product.id);
+        const unitPrice = offer ? offer.finalPrice : item.product.price;
+        const discountPercentage = offer ? offer.discountRate : 0;
 
         return {
           product: item.product,
@@ -48,7 +49,8 @@ export const useCartStore = defineStore("cart", {
 
     discountAmount() {
       return this.lines.reduce(
-        (total, line) => total + (line.product.price - line.unitPrice) * line.quantity,
+        (total, line) =>
+          total + (line.product.price - line.unitPrice) * line.quantity,
         0,
       );
     },

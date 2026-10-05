@@ -1,10 +1,13 @@
 <script setup>
 import ExclusiveOffersCard from "../components/ExclusiveOffersCard.vue";
+import ProfileForm from "../components/profile/ProfileForm.vue";
 </script>
 
 <template>
   <main class="perfil-view">
     <h1 class="perfil-view__title">Mi Perfil</h1>
+
+    <ProfileForm />
 
     <ExclusiveOffersCard />
   </main>

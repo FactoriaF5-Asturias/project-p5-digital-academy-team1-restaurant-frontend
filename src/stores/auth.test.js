@@ -29,7 +29,7 @@ describe('auth store', () => {
     authService.login.mockResolvedValue({
       firstName: 'Andrea',
       email: 'user@test.com',
-      role: 'admin',
+      roles: ['ROLE_ADMIN'],
     })
 
     const authStore = useAuthStore()
@@ -45,7 +45,7 @@ describe('auth store', () => {
     })
 
     expect(authStore.user.email).toBe('user@test.com')
-    expect(authStore.role).toBe('admin')
+    expect(authStore.role).toBe('ROLE_ADMIN')
     expect(authStore.isAuthenticated).toBe(true)
   })
 
@@ -53,7 +53,7 @@ describe('auth store', () => {
     authService.getCurrentUser.mockResolvedValue({
       firstName: 'Andrea',
       email: 'user@test.com',
-      role: 'cliente',
+      roles: ['ROLE_CUSTOMER'],
     })
 
     const authStore = useAuthStore()
@@ -62,7 +62,7 @@ describe('auth store', () => {
 
     expect(authService.getCurrentUser).toHaveBeenCalled()
     expect(authStore.user.email).toBe('user@test.com')
-    expect(authStore.role).toBe('cliente')
+    expect(authStore.role).toBe('ROLE_CUSTOMER')
     expect(authStore.isAuthenticated).toBe(true)
   })
 
@@ -81,7 +81,7 @@ describe('auth store', () => {
   it('logout limpia el usuario y el rol', async () => {
     authService.login.mockResolvedValue({
       email: 'user@test.com',
-      role: 'cliente',
+      roles: ['ROLE_CUSTOMER'],
     })
 
     authService.logout.mockResolvedValue()
@@ -96,6 +96,27 @@ describe('auth store', () => {
     await authStore.logout()
 
     expect(authService.logout).toHaveBeenCalled()
+    expect(authStore.user).toBeNull()
+    expect(authStore.role).toBeNull()
+    expect(authStore.isAuthenticated).toBe(false)
+  })
+
+  it('clearSession olvida el usuario sin llamar al backend', async () => {
+    authService.login.mockResolvedValue({
+      email: 'user@test.com',
+      roles: ['ROLE_CUSTOMER'],
+    })
+
+    const authStore = useAuthStore()
+
+    await authStore.login({
+      email: 'user@test.com',
+      password: '123456',
+    })
+
+    authStore.clearSession()
+
+    expect(authService.logout).not.toHaveBeenCalled()
     expect(authStore.user).toBeNull()
     expect(authStore.role).toBeNull()
     expect(authStore.isAuthenticated).toBe(false)

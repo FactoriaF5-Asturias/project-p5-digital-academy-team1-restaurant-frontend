@@ -1,9 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cart'
 import { useAuthStore } from '../stores/auth'
-import { ROLE_RESTRICTIONS_ENABLED } from '../constants/auth'
+import { canAccess } from '../router/guards'
+import UserMenu from './UserMenu.vue'
+import UserIdentity from './UserIdentity.vue'
 import logo from '../assets/logo.png'
 
 const router = useRouter()
@@ -13,19 +15,19 @@ const authStore = useAuthStore()
 const isMenuOpen = ref(false)
 
 const navLinks = [
-  { to: { name: 'carta' }, label: 'Carta', roles: [null, 'cliente', 'cocina', 'reparto', 'admin'] },
-  { to: { name: 'mi-pedido' }, label: 'Mi pedido', roles: ['cliente'] },
-  { to: { name: 'perfil' }, label: 'Perfil', roles: ['cliente', 'admin'] },
-  { to: { name: 'cesta' }, label: 'Cesta', roles: [null, 'cliente'] },
-  { to: { name: 'cocina' }, label: 'Cocina', roles: ['cocina', 'admin'] },
-  { to: { name: 'reparto' }, label: 'Reparto', roles: ['reparto', 'admin'] },
-  { to: { name: 'admin' }, label: 'Admin', roles: ['admin'] },
-]
+    { to: { name: 'carta' }, label: 'Carta' },
+    { to: { name: 'mi-pedido' }, label: 'Mi pedido' },
+    { to: { name: 'perfil' }, label: 'Perfil' },
+    { to: { name: 'cesta' }, label: 'Cesta' },
+    { to: { name: 'cocina' }, label: 'Cocina' },
+    { to: { name: 'reparto' }, label: 'Reparto' },
+    { to: { name: 'admin' }, label: 'Admin' },
+  ]
 
-function isAllowed(link) {
-  if (!ROLE_RESTRICTIONS_ENABLED) return true
-  return link.roles.includes(authStore.role)
-}
+// Los permisos se leen del router (meta.roles): una sola fuente de verdad.
+const visibleLinks = computed(() =>
+navLinks.filter((link) => canAccess(router.resolve(link.to), authStore.role))
+)
 
 function toggleMenu() {
   isMenuOpen.value = !isMenuOpen.value
@@ -46,7 +48,7 @@ async function handleLogout() {
   <header
     class="fixed top-0 left-0 z-50 w-full border-b border-[#C4C4C4] bg-[#E5E5E5]/95 shadow-sm backdrop-blur-xl"
   >
-    <div class="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-4 px-5">
+    <div class="mx-auto flex h-16 max-w-300 items-center justify-between gap-4 px-5">
       <div class="flex items-center gap-6">
         <router-link
           :to="{ name: 'carta' }"
@@ -74,13 +76,11 @@ async function handleLogout() {
           class="hidden items-center gap-1 rounded-lg border border-[#C4C4C4] bg-surface/70 p-1 shadow-sm xl:flex"
         >
           <router-link
-            v-for="link in navLinks"
+            v-for="link in visibleLinks"
             :key="link.label"
             :to="link.to"
             class="nav-link flex items-center gap-1.5 rounded px-3 py-1.5 text-sm text-on-surface-variant transition-colors hover:bg-surface/80 hover:text-on-surface"
-            :class="{ 'nav-link--inactive': !isAllowed(link) }"
             active-class="bg-surface text-primary font-semibold shadow-sm"
-            @click="!isAllowed(link) && $event.preventDefault()"
           >
             <span>{{ link.label }}</span>
 
@@ -117,20 +117,11 @@ async function handleLogout() {
         v-else
         class="hidden items-center gap-2 xl:flex"
       >
-        <router-link
-          :to="{ name: 'perfil' }"
-          class="rounded-lg px-3 py-2 text-sm font-semibold text-on-surface-variant transition-colors hover:text-primary"
-        >
-          Perfil
-        </router-link>
-
-        <button
-          type="button"
-          class="rounded-lg bg-primary-container px-4 py-2 text-sm font-semibold text-on-primary-container transition hover:opacity-90"
-          @click="handleLogout"
-        >
-          Cerrar sesión
-        </button>
+      <UserMenu
+          :user="authStore.user"
+          :role="authStore.role"
+          @logout="handleLogout"
+        />
       </div>
 
       <button
@@ -151,13 +142,12 @@ async function handleLogout() {
       class="flex flex-col gap-1 border-t border-[#C4C4C4] bg-surface px-5 py-3 xl:hidden"
     >
       <router-link
-        v-for="link in navLinks"
+        v-for="link in visibleLinks"
         :key="link.label"
         :to="link.to"
         class="nav-link flex items-center gap-1.5 rounded px-3 py-2 text-sm text-on-surface-variant transition-colors hover:bg-surface-variant hover:text-on-surface"
-        :class="{ 'nav-link--inactive': !isAllowed(link) }"
         active-class="bg-surface-variant text-primary font-semibold"
-        @click="isAllowed(link) ? closeMenu() : $event.preventDefault()"
+        @click="closeMenu"
       >
         <span>{{ link.label }}</span>
 
@@ -192,15 +182,8 @@ async function handleLogout() {
 
       <div
         v-else
-        class="mt-2 flex flex-col gap-2 border-t border-[#C4C4C4] pt-3"
-      >
-        <router-link
-          :to="{ name: 'perfil' }"
-          class="rounded px-3 py-2 text-sm font-semibold text-on-surface-variant transition-colors hover:text-primary"
-          @click="closeMenu"
-        >
-          Perfil
-        </router-link>
+        class="mt-2 flex flex-col gap-2 border-t border-[#C4C4C4] pt-3">
+                <UserIdentity :user="authStore.user" :role="authStore.role" class="px-3 py-2" />
 
         <button
           type="button"
@@ -213,11 +196,3 @@ async function handleLogout() {
     </nav>
   </header>
 </template>
-
-<style scoped>
-.nav-link--inactive {
-  color: #b7b7b7 !important;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-</style>

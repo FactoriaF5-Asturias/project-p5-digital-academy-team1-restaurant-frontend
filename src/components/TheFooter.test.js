@@ -23,7 +23,7 @@ describe('TheFooter', () => {
 
     const expected = [
       { name: 'Andrea', username: 'andreaperezgon' },
-      { name: 'Danil', username: 'danielmuntyanu' },
+      { name: 'Daniel', username: 'danielmuntyanu' },
       { name: 'Ioana', username: 'Alexapop' },
       { name: 'Jose', username: 'Josecgh' },
       { name: 'Luisa', username: 'lcortes89' },

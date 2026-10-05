@@ -28,25 +28,28 @@ describe('useExclusiveOffersStore', () => {
     expect(offersStore.activeOffers.map((offer) => offer.id)).toEqual(['a', 'b'])
   })
 
-  it('discountForProduct returns the discount of an active offer for that product', () => {
+    it('offerForProduct returns the active offer for that product', () => {
     const offersStore = useExclusiveOffersStore()
-    offersStore.offers = [{ id: 'a', productId: 1, discountPercentage: 15, expiresAt: null }]
+    const offer = { id: 'a', productId: 1, finalPrice: 8.5, discountRate: 15, expiresAt: null }
+    offersStore.offers = [offer]
 
-    expect(offersStore.discountForProduct(1)).toBe(15)
+    expect(offersStore.offerForProduct(1)).toEqual(offer)
   })
 
-  it('discountForProduct returns 0 when there is no offer for that product', () => {
+  it('offerForProduct returns null when there is no offer for that product', () => {
     const offersStore = useExclusiveOffersStore()
-    offersStore.offers = [{ id: 'a', productId: 1, discountPercentage: 15, expiresAt: null }]
+    offersStore.offers = [{ id: 'a', productId: 1, finalPrice: 8.5, discountRate: 15, expiresAt: null }]
 
-    expect(offersStore.discountForProduct(999)).toBe(0)
+    expect(offersStore.offerForProduct(999)).toBeNull()
   })
 
-  it('discountForProduct returns 0 when the only offer for that product has expired', () => {
+  it('offerForProduct returns null when the only offer for that product has expired', () => {
     const offersStore = useExclusiveOffersStore()
-    offersStore.offers = [{ id: 'a', productId: 1, discountPercentage: 15, expiresAt: '2000-01-01T00:00:00' }]
+    offersStore.offers = [
+      { id: 'a', productId: 1, finalPrice: 8.5, discountRate: 15, expiresAt: '2000-01-01T00:00:00' },
+    ]
 
-    expect(offersStore.discountForProduct(1)).toBe(0)
+    expect(offersStore.offerForProduct(1)).toBeNull()
   })
 
   it('sets isLoading to true while fetching and false when finished', async () => {

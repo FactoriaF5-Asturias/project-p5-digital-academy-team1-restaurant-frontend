@@ -16,11 +16,12 @@ export const useExclusiveOffersStore = defineStore("exclusiveOffers", {
   getters: {
     activeOffers: (state) => state.offers.filter((offer) => !isExpired(offer.expiresAt)),
 
-    discountForProduct: (state) => (productId) => {
-      const offer = state.offers.find(
-        (o) => o.productId === productId && !isExpired(o.expiresAt),
+    // Devuelve la oferta activa completa de un producto (con su finalPrice ya
+    // calculado por el backend), o null si no tiene ninguna oferta activa.
+    offerForProduct: (state) => (productId) => {
+      return (
+        state.offers.find((o) => o.productId === productId && !isExpired(o.expiresAt)) ?? null
       );
-      return offer ? offer.discountPercentage : 0;
     },
   },
   actions: {

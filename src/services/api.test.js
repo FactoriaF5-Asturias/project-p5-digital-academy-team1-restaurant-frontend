@@ -4,6 +4,7 @@ describe('api', () => {
   let responseInterceptorSuccess
   let responseInterceptorError
   let mockAxiosInstance
+  let sessionHandlers
 
   beforeEach(async () => {
     vi.resetModules()
@@ -28,7 +29,9 @@ describe('api', () => {
       },
     }))
 
-    await import('./api')
+    const { setSessionHandlers } = await import('./api')
+    sessionHandlers = { onUnauthorized: vi.fn(), onForbidden: vi.fn() }
+    setSessionHandlers(sessionHandlers)
   })
 
   it('passes through a successful response unchanged', () => {
@@ -36,24 +39,40 @@ describe('api', () => {
     expect(responseInterceptorSuccess(response)).toBe(response)
   })
 
-  it('rejects immediately when the error status is not 403', async () => {
+  it('rejects immediately when the error status is not 401 or 403', async () => {
     const error = { response: { status: 500 }, config: { url: '/api/v1/something' } }
 
     await expect(responseInterceptorError(error)).rejects.toBe(error)
     expect(mockAxiosInstance.get).not.toHaveBeenCalled()
   })
 
-  it('redirects to /login when /auth/refresh itself returns 403', async () => {
-    delete window.location
-    window.location = { href: '' }
-
+  it('ends the session when /auth/refresh itself returns 401', async () => {
     const error = {
       response: { status: 401 },
       config: { url: '/api/v1/auth/refresh' },
     }
 
     await expect(responseInterceptorError(error)).rejects.toBe(error)
-    expect(window.location.href).toBe('/login')
+    expect(sessionHandlers.onUnauthorized).toHaveBeenCalled()
+  })
+
+  it('does not try to refresh when the login credentials are wrong', async () => {
+    const error = {
+      response: { status: 401 },
+      config: { url: '/api/v1/auth/login' },
+    }
+
+    await expect(responseInterceptorError(error)).rejects.toBe(error)
+    expect(mockAxiosInstance.get).not.toHaveBeenCalled()
+    expect(sessionHandlers.onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('notifies the app when the backend answers 403', async () => {
+    const error = { response: { status: 403 }, config: { url: '/api/v1/products/administration' } }
+
+    await expect(responseInterceptorError(error)).rejects.toBe(error)
+    expect(sessionHandlers.onForbidden).toHaveBeenCalled()
+    expect(mockAxiosInstance.get).not.toHaveBeenCalled()
   })
 
   it('calls refresh and retries the original request on 401', async () => {
@@ -79,15 +98,13 @@ describe('api', () => {
     expect(mockAxiosInstance.get).not.toHaveBeenCalled()
   })
 
-  it('redirects to /login when refresh itself fails', async () => {
-    delete window.location
-    window.location = { href: '' }
+  it('ends the session when refresh itself fails', async () => {
     mockAxiosInstance.get.mockRejectedValueOnce(new Error('refresh failed'))
 
     const originalRequest = { url: '/api/v1/orders' }
     const error = { response: { status: 401 }, config: originalRequest }
 
     await expect(responseInterceptorError(error)).rejects.toThrow('refresh failed')
-    expect(window.location.href).toBe('/login')
+    expect(sessionHandlers.onUnauthorized).toHaveBeenCalled()
   })
 })
