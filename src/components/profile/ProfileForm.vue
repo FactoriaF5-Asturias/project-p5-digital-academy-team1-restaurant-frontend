@@ -7,6 +7,10 @@ import { useProfileForm } from './useProfileForm'
 const authStore = useAuthStore()
 const formElement = ref(null)
 
+const isSaving = ref(false)
+const successMessage = ref('')
+const errorMessage = ref('')
+
 const {
   fields,
   form,
@@ -18,13 +22,34 @@ const {
   validateForm,
 } = useProfileForm(() => authStore.user)
 
+function clearMessages() {
+  successMessage.value = ''
+  errorMessage.value = ''
+}
+
 function handleDictation(field, transcript) {
+  if (isSaving.value) return
+
+  clearMessages()
   form[field] = transcript
   validateField(field)
 }
 
+function handleReset() {
+  resetForm()
+  clearMessages()
+}
+
 async function handleSubmit() {
-  if (authStore.isFetchingUser || !authStore.user) return
+  if (
+    isSaving.value ||
+    authStore.isFetchingUser ||
+    !authStore.user
+  ) {
+    return
+  }
+
+  clearMessages()
 
   if (!validateForm()) {
     await nextTick()
@@ -38,15 +63,43 @@ async function handleSubmit() {
 
   if (!hasChanges.value) return
 
-  // Pendiente del contrato del backend:
-  // enviar los datos y actualizar el store tras guardar correctamente.
+  const profile = Object.fromEntries(
+    fields.map(({ name }) => [name, form[name].trim()]),
+  )
+
+  isSaving.value = true
+
+  try {
+    await authStore.updateProfile(profile)
+    await nextTick()
+
+    successMessage.value = 'Perfil actualizado correctamente.'
+  } catch (error) {
+    const status = error.response?.status
+
+    if (status === 409) {
+      errorMessage.value =
+        'Ese correo ya está en uso o existe un conflicto de datos.'
+    } else if (status === 400) {
+      errorMessage.value =
+        'Revisa los datos del formulario antes de guardar.'
+    } else if (status === 401 || status === 403) {
+      errorMessage.value =
+        'No se pudo autorizar el cambio. Comprueba tu sesión.'
+    } else {
+      errorMessage.value =
+        'No se pudo guardar el perfil. Inténtalo de nuevo.'
+    }
+  } finally {
+    isSaving.value = false
+  }
 }
 </script>
 
 <template>
   <section
     class="profile-form"
-    :aria-busy="Boolean(authStore.isFetchingUser)"
+    :aria-busy="Boolean(authStore.isFetchingUser || isSaving)"
   >
     <h2 class="profile-form__title">Datos personales</h2>
 
@@ -71,13 +124,17 @@ async function handleSubmit() {
       ref="formElement"
       class="profile-form__fields"
       novalidate
+      @input="clearMessages"
       @submit.prevent="handleSubmit"
     >
       <p class="profile-form__notice">
         Todos los campos son obligatorios.
       </p>
 
-      <div class="profile-form__grid">
+      <fieldset
+        :disabled="isSaving"
+        class="profile-form__grid"
+      >
         <ProfileFormField
           v-for="field in fields"
           :key="field.name"
@@ -87,7 +144,7 @@ async function handleSubmit() {
           @blur="validateField(field.name)"
           @transcript="handleDictation(field.name, $event)"
         />
-      </div>
+      </fieldset>
 
       <p
         v-if="hasChanges"
@@ -97,8 +154,20 @@ async function handleSubmit() {
         Tienes cambios sin guardar.
       </p>
 
-      <p id="profile-save-help" class="profile-form__notice">
-        El guardado de cambios estará disponible próximamente.
+      <p
+        v-if="successMessage"
+        class="profile-form__notice"
+        role="status"
+      >
+        {{ successMessage }}
+      </p>
+
+      <p
+        v-if="errorMessage"
+        class="profile-form__error"
+        role="alert"
+      >
+        {{ errorMessage }}
       </p>
 
       <div class="profile-form__actions">
@@ -106,7 +175,8 @@ async function handleSubmit() {
           v-if="hasChanges"
           type="button"
           class="profile-form__reset"
-          @click="resetForm"
+          :disabled="isSaving"
+          @click="handleReset"
         >
           Descartar cambios
         </button>
@@ -114,10 +184,9 @@ async function handleSubmit() {
         <button
           type="submit"
           class="profile-form__submit"
-          disabled
-          aria-describedby="profile-save-help"
+          :disabled="isSaving || !hasChanges"
         >
-          Guardar cambios
+          {{ isSaving ? 'Guardando…' : 'Guardar cambios' }}
         </button>
       </div>
     </form>
@@ -140,11 +209,15 @@ async function handleSubmit() {
 }
 
 .profile-form__grid {
-  @apply grid grid-cols-1 gap-5 sm:grid-cols-2;
+  @apply grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2;
 }
 
 .profile-form__notice {
   @apply text-sm text-on-surface;
+}
+
+.profile-form__error {
+  @apply text-sm text-red-700;
 }
 
 .profile-form__actions {
@@ -163,7 +236,8 @@ async function handleSubmit() {
     font-semibold text-white transition;
 }
 
-.profile-form__submit:disabled {
+.profile-form__submit:disabled,
+.profile-form__reset:disabled {
   @apply cursor-not-allowed opacity-50;
 }
 </style>
