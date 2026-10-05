@@ -1,89 +1,231 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useExclusiveOffersStore } from './exclusiveOffers'
-import * as exclusiveOffersMock from '../mocks/exclusiveOffers.mock'
+import { getExclusiveOffers } from '../services/exclusiveOffers.service'
+
+vi.mock('../services/exclusiveOffers.service', () => ({
+  getExclusiveOffers: vi.fn(),
+}))
+
+function buildOffer(overrides = {}) {
+  return {
+    id: 'offer-a',
+    productId: 1,
+    productName: 'Hello Edamame',
+    discountPercentage: 15,
+    originalPrice: 10,
+    finalPrice: 8.5,
+    couponCode: 'test-coupon',
+    used: false,
+    expiresAt: null,
+    ...overrides,
+  }
+}
 
 describe('useExclusiveOffersStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.restoreAllMocks()
+    vi.resetAllMocks()
+
+    getExclusiveOffers.mockResolvedValue({
+      offers: [],
+    })
   })
 
   it('starts empty', () => {
-    const offersStore = useExclusiveOffersStore()
+    const store = useExclusiveOffersStore()
 
-    expect(offersStore.offers).toEqual([])
-    expect(offersStore.isLoading).toBe(false)
-    expect(offersStore.error).toBeNull()
+    expect(store.offers).toEqual([])
+    expect(store.isLoading).toBe(false)
+    expect(store.error).toBeNull()
   })
 
-  it('activeOffers excludes expired offers and keeps offers without expiry', () => {
-    const offersStore = useExclusiveOffersStore()
-    offersStore.offers = [
-      { id: 'a', productId: 1, discountPercentage: 10, expiresAt: null },
-      { id: 'b', productId: 2, discountPercentage: 20, expiresAt: '2099-01-01T00:00:00' },
-      { id: 'c', productId: 3, discountPercentage: 30, expiresAt: '2000-01-01T00:00:00' },
+  it('keeps offers without expiry and excludes expired offers', () => {
+    const store = useExclusiveOffersStore()
+
+    store.offers = [
+      buildOffer({ id: 'a' }),
+      buildOffer({
+        id: 'b',
+        expiresAt: '2099-01-01T00:00:00',
+      }),
+      buildOffer({
+        id: 'c',
+        expiresAt: '2000-01-01T00:00:00',
+      }),
     ]
 
-    expect(offersStore.activeOffers.map((offer) => offer.id)).toEqual(['a', 'b'])
+    expect(store.activeOffers.map((offer) => offer.id)).toEqual([
+      'a',
+      'b',
+    ])
   })
 
-    it('offerForProduct returns the active offer for that product', () => {
-    const offersStore = useExclusiveOffersStore()
-    const offer = { id: 'a', productId: 1, finalPrice: 8.5, discountRate: 15, expiresAt: null }
-    offersStore.offers = [offer]
+  it('excludes used offers even when they have not expired', () => {
+    const store = useExclusiveOffersStore()
 
-    expect(offersStore.offerForProduct(1)).toEqual(offer)
-  })
-
-  it('offerForProduct returns null when there is no offer for that product', () => {
-    const offersStore = useExclusiveOffersStore()
-    offersStore.offers = [{ id: 'a', productId: 1, finalPrice: 8.5, discountRate: 15, expiresAt: null }]
-
-    expect(offersStore.offerForProduct(999)).toBeNull()
-  })
-
-  it('offerForProduct returns null when the only offer for that product has expired', () => {
-    const offersStore = useExclusiveOffersStore()
-    offersStore.offers = [
-      { id: 'a', productId: 1, finalPrice: 8.5, discountRate: 15, expiresAt: '2000-01-01T00:00:00' },
+    store.offers = [
+      buildOffer({ id: 'available' }),
+      buildOffer({
+        id: 'used',
+        used: true,
+      }),
     ]
 
-    expect(offersStore.offerForProduct(1)).toBeNull()
+    expect(store.activeOffers.map((offer) => offer.id)).toEqual([
+      'available',
+    ])
   })
 
-  it('sets isLoading to true while fetching and false when finished', async () => {
-    vi.spyOn(exclusiveOffersMock, 'getExclusiveOffers').mockResolvedValue({ offers: [] })
-    const offersStore = useExclusiveOffersStore()
+  it('returns the active offer for a product with its backend price', () => {
+    const store = useExclusiveOffersStore()
+    const offer = buildOffer()
 
-    const promise = offersStore.fetchOffers()
-    expect(offersStore.isLoading).toBe(true)
+    store.offers = [offer]
+
+    expect(store.offerForProduct(1)).toEqual(offer)
+    expect(store.offerForProduct(1).finalPrice).toBe(8.5)
+  })
+
+  it('returns null when the product has no offer', () => {
+    const store = useExclusiveOffersStore()
+
+    store.offers = [buildOffer()]
+
+    expect(store.offerForProduct(999)).toBeNull()
+  })
+
+  it('returns null when the product offer has expired', () => {
+    const store = useExclusiveOffersStore()
+
+    store.offers = [
+      buildOffer({
+        expiresAt: '2000-01-01T00:00:00',
+      }),
+    ]
+
+    expect(store.offerForProduct(1)).toBeNull()
+  })
+
+  it('returns null when the product offer has been used', () => {
+    const store = useExclusiveOffersStore()
+
+    store.offers = [
+      buildOffer({
+        used: true,
+      }),
+    ]
+
+    expect(store.offerForProduct(1)).toBeNull()
+  })
+
+  it('finds an unused offer when another offer for the same product is used', () => {
+    const store = useExclusiveOffersStore()
+    const availableOffer = buildOffer({ id: 'available' })
+
+    store.offers = [
+      buildOffer({
+        id: 'used',
+        used: true,
+      }),
+      availableOffer,
+    ]
+
+    expect(store.offerForProduct(1)).toEqual(availableOffer)
+  })
+
+  it('sets loading while fetching and clears it afterwards', async () => {
+    const store = useExclusiveOffersStore()
+
+    const promise = store.fetchOffers()
+
+    expect(store.isLoading).toBe(true)
 
     await promise
-    expect(offersStore.isLoading).toBe(false)
+
+    expect(store.isLoading).toBe(false)
+    expect(getExclusiveOffers).toHaveBeenCalledTimes(1)
   })
 
-  it('stores the fetched offers on success', async () => {
-    const fetchedOffers = [{ id: 'a', productId: 1, discountPercentage: 15, expiresAt: null }]
-    vi.spyOn(exclusiveOffersMock, 'getExclusiveOffers').mockResolvedValue({ offers: fetchedOffers })
-    const offersStore = useExclusiveOffersStore()
+  it('stores fetched offers without changing their prices', async () => {
+    const fetchedOffers = [buildOffer()]
 
-    await offersStore.fetchOffers()
+    getExclusiveOffers.mockResolvedValue({
+      offers: fetchedOffers,
+    })
 
-    expect(offersStore.offers).toEqual(fetchedOffers)
-    expect(offersStore.error).toBeNull()
+    const store = useExclusiveOffersStore()
+
+    await store.fetchOffers()
+
+    expect(store.offers).toEqual(fetchedOffers)
+    expect(store.offers[0].finalPrice).toBe(8.5)
+    expect(store.error).toBeNull()
   })
 
-  it('stores an error message when the fetch fails', async () => {
-    vi.spyOn(exclusiveOffersMock, 'getExclusiveOffers').mockRejectedValue(new Error('network error'))
-    const offersStore = useExclusiveOffersStore()
+  it('clears previous offers and shows an error when fetching fails', async () => {
+    getExclusiveOffers.mockRejectedValue(
+      new Error('Network error'),
+    )
 
-    await offersStore.fetchOffers()
+    const store = useExclusiveOffersStore()
+    store.offers = [buildOffer()]
 
-    expect(offersStore.error).toBe(
+    await store.fetchOffers()
+
+    expect(store.error).toBe(
       'No se han podido cargar tus ofertas exclusivas. Inténtalo de nuevo más tarde.',
     )
-    expect(offersStore.offers).toEqual([])
-    expect(offersStore.isLoading).toBe(false)
+    expect(store.offers).toEqual([])
+    expect(store.isLoading).toBe(false)
+  })
+
+  it('allows retrying after a failed request', async () => {
+    const fetchedOffers = [buildOffer()]
+
+    getExclusiveOffers
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockResolvedValueOnce({
+        offers: fetchedOffers,
+      })
+
+    const store = useExclusiveOffersStore()
+
+    await store.fetchOffers()
+
+    expect(store.error).not.toBeNull()
+
+    await store.fetchOffers()
+
+    expect(store.error).toBeNull()
+    expect(store.offers).toEqual(fetchedOffers)
+    expect(store.isLoading).toBe(false)
+  })
+
+  it('prevents duplicate requests while loading', async () => {
+    let resolveRequest
+
+    getExclusiveOffers.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRequest = resolve
+      }),
+    )
+
+    const store = useExclusiveOffersStore()
+
+    const firstRequest = store.fetchOffers()
+    await store.fetchOffers()
+
+    expect(getExclusiveOffers).toHaveBeenCalledTimes(1)
+    expect(store.isLoading).toBe(true)
+
+    resolveRequest({
+      offers: [buildOffer()],
+    })
+
+    await firstRequest
+
+    expect(store.isLoading).toBe(false)
+    expect(store.offers).toHaveLength(1)
   })
 })
