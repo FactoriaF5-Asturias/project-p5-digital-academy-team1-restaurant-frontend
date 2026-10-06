@@ -5,11 +5,14 @@ import LoginForm from './LoginForm.vue'
 import { authService } from '../../services/authService'
 
 const pushMock = vi.fn()
+const routeMock = { query: {} }
 
 vi.mock('vue-router', () => ({
-  useRouter: () => ({
+    useRouter: () => ({
     push: pushMock,
   }),
+  useRoute: () => routeMock,
+  
   RouterLink: {
     template: '<a><slot /></a>',
   },
@@ -37,6 +40,7 @@ function mountLoginForm() {
 describe('LoginForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    routeMock.query = {}
   })
 
   it('renders the login form', () => {
@@ -47,7 +51,7 @@ describe('LoginForm', () => {
     expect(wrapper.text()).toContain('Iniciar sesión')
   })
 
-  it('sends the credentials, stores the user and redirects to profile', async () => {
+  it('sends the credentials, stores the user and redirects to the menu', async () => {
     const user = {
       email: 'user@test.com',
       firstName: 'Andrea',
@@ -73,7 +77,7 @@ describe('LoginForm', () => {
       password: '123456',
     })
 
-    expect(pushMock).toHaveBeenCalledWith('/perfil')
+    expect(pushMock).toHaveBeenCalledWith({ name: 'carta' })
   })
 
   it('shows an error when login fails', async () => {
@@ -100,5 +104,21 @@ describe('LoginForm', () => {
 
     expect(wrapper.text()).toContain('Credenciales incorrectas')
     expect(pushMock).not.toHaveBeenCalled()
+  })
+  
+  it('confirms the account was created when coming from the registration', () => {
+    routeMock.query = { registered: '1' }
+
+    const wrapper = mountLoginForm()
+
+    expect(wrapper.find('[role="status"]').text()).toBe(
+      'Cuenta creada. Ya puedes iniciar sesión.',
+    )
+  })
+
+  it('does not show the account created message on a normal visit', () => {
+    const wrapper = mountLoginForm()
+
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
   })
 })

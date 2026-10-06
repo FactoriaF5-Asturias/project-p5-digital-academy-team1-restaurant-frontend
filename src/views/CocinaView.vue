@@ -30,7 +30,8 @@ async function loadOrders() {
 }
 
 async function loadMetrics() {
-  isLoadingMetrics.value = true
+  // Solo "cargando" la primera vez: al refrescar se mantienen las métricas en pantalla.
+  isLoadingMetrics.value = metrics.value === null
   metricsError.value = null
 
   try {
@@ -61,6 +62,7 @@ onMounted(() => {
         :orders="orders"
         :is-loading="isLoadingOrders"
         :error="ordersError"
+        @status-changed="loadMetrics"
       />
     </div>
   </main>

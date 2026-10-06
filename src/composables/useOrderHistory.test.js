@@ -15,6 +15,7 @@ import { getOrderHistory } from '../services/orderHistory.service'
 
 vi.mock('../services/orderHistory.service', () => ({
   getOrderHistory: vi.fn(),
+  getRepeatOrderItems: vi.fn(),
 }))
 
 const emptyPage = {
@@ -51,7 +52,7 @@ describe('useOrderHistory', () => {
     scopes = []
   })
 
-  it('sets isLoading while fetching and clears it when finished', async () => {
+  it('sets loading while fetching and clears it afterwards', async () => {
     const { isLoading, fetchHistory } = createHistory()
 
     const promise = fetchHistory()
@@ -68,16 +69,14 @@ describe('useOrderHistory', () => {
 
     await fetchHistory(2)
 
-    expect(getOrderHistory).toHaveBeenCalledWith(
-      'test-user',
-      {
-        page: 2,
-        size: 3,
-      },
-    )
+    expect(getOrderHistory).toHaveBeenCalledWith({
+      userId: 'test-user',
+      page: 2,
+      size: 3,
+    })
   })
 
-  it('stores fetched orders and pagination on success', async () => {
+  it('stores fetched orders and pagination', async () => {
     const order = {
       id: 101,
       date: '2026-09-20T21:10:00',
@@ -109,7 +108,7 @@ describe('useOrderHistory', () => {
     expect(totalItems.value).toBe(5)
   })
 
-  it('stores an error message when the request fails', async () => {
+  it('stores an error message when fetching fails', async () => {
     getOrderHistory.mockRejectedValue(
       new Error('Network error'),
     )
@@ -121,7 +120,6 @@ describe('useOrderHistory', () => {
     expect(error.value).toBe(
       'No se ha podido cargar tu historial de pedidos. Inténtalo de nuevo más tarde.',
     )
-
     expect(isLoading.value).toBe(false)
   })
 
@@ -166,14 +164,11 @@ describe('useOrderHistory', () => {
 
     await goToPage(2)
 
-    expect(getOrderHistory).toHaveBeenLastCalledWith(
-      'test-user',
-      {
-        page: 2,
-        size: 3,
-      },
-    )
-
+    expect(getOrderHistory).toHaveBeenLastCalledWith({
+      userId: 'test-user',
+      page: 2,
+      size: 3,
+    })
     expect(currentPage.value).toBe(2)
   })
 
@@ -208,13 +203,11 @@ describe('useOrderHistory', () => {
     await nextTick()
     await flushPromises()
 
-    expect(getOrderHistory).toHaveBeenCalledWith(
-      'loaded-user',
-      {
-        page: 1,
-        size: 3,
-      },
-    )
+    expect(getOrderHistory).toHaveBeenCalledWith({
+      userId: 'loaded-user',
+      page: 1,
+      size: 3,
+    })
   })
 
   it('clears history when the user logs out', async () => {

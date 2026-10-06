@@ -66,7 +66,7 @@ describe('RegisterForm', () => {
       city: 'Oviedo',
     })
 
-    expect(pushMock).toHaveBeenCalledWith('/login')
+        expect(pushMock).toHaveBeenCalledWith({ name: 'login', query: { registered: '1' } })
   })
 
   it('shows an error when passwords do not match', async () => {

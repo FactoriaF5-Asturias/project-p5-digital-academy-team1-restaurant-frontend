@@ -18,3 +18,11 @@ export const ROLE_LABELS = Object.freeze({
 export function getRoleLabel(role) {
   return ROLE_LABELS[role] ?? ''
 }
+
+// Roles que el administrador puede asignar desde la gestión de usuarios.
+export const ASSIGNABLE_ROLES = Object.freeze([
+  ROLES.CUSTOMER,
+  ROLES.COOK,
+  ROLES.DELIVERY,
+  ROLES.ADMIN,
+])

@@ -8,18 +8,13 @@ import { validateProductForm } from '../utils/productValidation'
 // Valida los datos y, si son correctos, emite submit con los datos limpios.
 // No llama al backend: eso lo decide el padre.
 
-const MIN_STOCK = 0
-const STOCK_STEP = 1
-
 const FORM_TEXTS = Object.freeze({
   [PRODUCT_FORM_MODES.CREATE]: {
     title: 'Añadir nuevo producto a la carta',
-    stockLabel: 'Stock inicial',
     submitLabel: 'Guardar',
   },
   [PRODUCT_FORM_MODES.EDIT]: {
     title: 'Editar producto',
-    stockLabel: 'Stock',
     submitLabel: 'Guardar cambios',
   },
 })
@@ -56,7 +51,6 @@ function buildInitialForm(product) {
     category: product?.category ?? PRODUCT_CATEGORIES.ESPECIALES,
     imageUrl: product?.imageUrl ?? '',
     price: product?.price ?? '',
-    stock: product ? (product.stock ?? MIN_STOCK) : '',
     description: product?.description ?? '',
   }
 }
@@ -71,17 +65,6 @@ const hasChanges = computed(() =>
 const canSubmit = computed(() => isCreateMode.value || hasChanges.value)
 const displayedError = computed(() => validationError.value || props.errorMessage)
 
-function incrementStock() {
-  const current = parseInt(form.stock, 10)
-  form.stock = (isNaN(current) ? MIN_STOCK : current) + STOCK_STEP
-}
-
-function decrementStock() {
-  const current = parseInt(form.stock, 10)
-  const next = (isNaN(current) ? MIN_STOCK : current) - STOCK_STEP
-  form.stock = Math.max(MIN_STOCK, next)
-}
-
 function handleSubmit() {
   validationError.value = validateProductForm(form, { requireImage: isCreateMode.value })
   if (validationError.value) return
@@ -91,7 +74,6 @@ function handleSubmit() {
     category: form.category,
     imageUrl: form.imageUrl.trim(),
     price: parseFloat(form.price),
-    stock: parseInt(form.stock, 10),
     description: form.description.trim(),
   })
 }
@@ -132,50 +114,17 @@ function handleSubmit() {
           </select>
         </div>
 
-        <div class="product-form__row">
-          <div class="product-form__row-item">
-            <label class="product-form__label" for="product-price">Precio (€)</label>
-            <input
-              id="product-price"
-              v-model="form.price"
-              type="number"
-              step="0.01"
-              min="0"
-              class="product-form__input"
-              placeholder="Ej. 12.50"
-            />
-          </div>
-
-          <div class="product-form__row-item">
-            <label class="product-form__label" for="product-stock">{{ texts.stockLabel }}</label>
-            <div class="product-form__stepper">
-              <button
-                type="button"
-                class="product-form__stepper-button"
-                aria-label="Disminuir stock"
-                @click="decrementStock"
-              >
-                −
-              </button>
-              <input
-                id="product-stock"
-                v-model="form.stock"
-                type="number"
-                min="0"
-                step="1"
-                class="product-form__stepper-input"
-                placeholder="Ej. 20"
-              />
-              <button
-                type="button"
-                class="product-form__stepper-button"
-                aria-label="Aumentar stock"
-                @click="incrementStock"
-              >
-                +
-              </button>
-            </div>
-          </div>
+        <div>
+          <label class="product-form__label" for="product-price">Precio (€)</label>
+          <input
+            id="product-price"
+            v-model="form.price"
+            type="number"
+            step="0.01"
+            min="0"
+            class="product-form__input"
+            placeholder="Ej. 12.50"
+          />
         </div>
 
         <div>
@@ -238,26 +187,6 @@ function handleSubmit() {
 
 .product-form__input--textarea {
   @apply resize-none;
-}
-
-.product-form__row {
-  @apply flex gap-3;
-}
-
-.product-form__row-item {
-  @apply flex-1;
-}
-
-.product-form__stepper {
-  @apply flex items-center border border-outline rounded-lg overflow-hidden;
-}
-
-.product-form__stepper-button {
-  @apply w-8 h-8 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition;
-}
-
-.product-form__stepper-input {
-  @apply flex-1 w-0 text-center border-x border-outline text-sm outline-none py-2;
 }
 
 .product-form__error {

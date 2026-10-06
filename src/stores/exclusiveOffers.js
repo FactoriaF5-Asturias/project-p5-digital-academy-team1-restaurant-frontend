@@ -1,15 +1,8 @@
 import { defineStore } from 'pinia'
-import { getExclusiveOffers } from '../services/exclusiveOffers.service'
-
-function isExpired(expiresAt) {
-  if (!expiresAt) return false
-
-  return new Date(expiresAt).getTime() < Date.now()
-}
-
-function isActiveOffer(offer) {
-  return !offer.used && !isExpired(offer.expiresAt)
-}
+import {
+  getExclusiveOffers,
+  consumeOffer as requestConsumeOffer,
+} from '../services/offers.service'
 
 export const useExclusiveOffersStore = defineStore('exclusiveOffers', {
   state: () => ({
@@ -19,13 +12,15 @@ export const useExclusiveOffersStore = defineStore('exclusiveOffers', {
   }),
 
   getters: {
-    activeOffers: (state) => state.offers.filter(isActiveOffer),
+    activeOffers: (state) => {
+      return state.offers.filter((offer) => !offer.used)
+    },
 
     offerForProduct: (state) => (productId) => {
       return (
         state.offers.find(
           (offer) =>
-            offer.productId === productId && isActiveOffer(offer),
+            offer.product?.id === productId && !offer.used,
         ) ?? null
       )
     },
@@ -39,15 +34,32 @@ export const useExclusiveOffersStore = defineStore('exclusiveOffers', {
       this.error = null
 
       try {
-        const result = await getExclusiveOffers()
-
-        this.offers = result.offers
+        this.offers = await getExclusiveOffers()
       } catch {
         this.offers = []
         this.error =
           'No se han podido cargar tus ofertas exclusivas. Inténtalo de nuevo más tarde.'
       } finally {
         this.isLoading = false
+      }
+    },
+
+    async consumeOffer(coupon) {
+      try {
+        const updatedOffer = await requestConsumeOffer(coupon)
+
+        const index = this.offers.findIndex(
+          (offer) => offer.coupon === coupon,
+        )
+
+        if (index !== -1) {
+          this.offers[index] = updatedOffer
+        }
+      } catch (error) {
+        console.error(
+          '[exclusiveOffers] Error al consumir la oferta:',
+          error,
+        )
       }
     },
   },

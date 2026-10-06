@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { updateKitchenOrderStatus } from '../services/kitchen.service'
+import { ORDER_STATUS_LABELS, getLabel } from '../constants/invoiceLabels'
 
 const props = defineProps({
   order: {
@@ -8,6 +9,9 @@ const props = defineProps({
     required: true,
   },
 })
+
+// Avisa a la vista de que el estado ha cambiado para que refresque las métricas.
+const emit = defineEmits(['status-changed'])
 
 const currentStatus = ref(props.order.status ?? 'PROCESSING')
 const isUpdating = ref(false)
@@ -24,6 +28,8 @@ async function changeStatus(status) {
   try {
     await updateKitchenOrderStatus(props.order.id, status)
     currentStatus.value = status
+    emit('status-changed', { id: props.order.id, status })
+
   } catch {
     error.value = 'No se ha podido actualizar el estado.'
   } finally {
@@ -107,7 +113,7 @@ async function changeStatus(status) {
     </div>
 
     <p class="mt-4 text-sm text-on-surface-variant">
-      Estado: {{ currentStatus }}
+      Estado: {{ getLabel(ORDER_STATUS_LABELS, currentStatus) }}
     </p>
 
     <p

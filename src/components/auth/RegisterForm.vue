@@ -2,8 +2,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService } from '../../services/authService'
+import PasswordInput from '../PasswordInput.vue'
 
 const router = useRouter()
+
+// El login lee este parámetro para confirmar que la cuenta se ha creado.
+const REGISTERED_QUERY = { registered: '1' }
 
 const firstName = ref('')
 const lastName = ref('')
@@ -38,7 +42,7 @@ const handleSubmit = async () => {
       city: city.value,
     })
 
-    await router.push('/login')
+    await router.push({ name: 'login', query: REGISTERED_QUERY })
   } catch (error) {
     errorMessage.value =
       error.response?.data?.message ||
@@ -120,14 +124,10 @@ const handleSubmit = async () => {
         Contraseña
       </label>
 
-      <input
+      <PasswordInput
         id="password"
         v-model="password"
-        type="password"
         autocomplete="new-password"
-        required
-        class="w-full rounded-lg border border-outline bg-surface-container px-4 py-3 outline-none transition focus:border-primary"
-        placeholder="••••••••"
       />
     </div>
 
@@ -139,14 +139,10 @@ const handleSubmit = async () => {
         Confirmar contraseña
       </label>
 
-      <input
+      <PasswordInput
         id="confirm-password"
         v-model="confirmPassword"
-        type="password"
         autocomplete="new-password"
-        required
-        class="w-full rounded-lg border border-outline bg-surface-container px-4 py-3 outline-none transition focus:border-primary"
-        placeholder="••••••••"
       />
     </div>
     <div>

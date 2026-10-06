@@ -1,8 +1,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import PaginationControl from './PaginationControl.vue'
+import LoadingSpinner from './LoadingSpinner.vue'
 import { useOrderHistory } from '../composables/useOrderHistory'
 import { useCartStore } from '../stores/cart'
+import { getRepeatOrderItems } from '../services/orderHistory.service'
 
 const {
   orders,
@@ -17,6 +19,7 @@ const {
 
 const cartStore = useCartStore()
 const showAll = ref(false)
+const repeatError = ref(null)
 
 onMounted(() => {
   fetchHistory(1)
@@ -30,15 +33,22 @@ function hasUnavailableItems(order) {
   return order.items.some((item) => !item.available)
 }
 
-function handleRepeatOrder(order) {
-  const availableItems = order.items.filter((item) => item.available)
+async function handleRepeatOrder(order) {
+  repeatError.value = null
 
-  for (const item of availableItems) {
-    const product = { id: item.productId, name: item.name, price: item.price }
-    cartStore.addProduct(product)
-    for (let i = 1; i < item.quantity; i++) {
-      cartStore.incrementQuantity(product.id)
+  try {
+    const items = await getRepeatOrderItems(order.id)
+
+    for (const item of items) {
+      const product = { id: item.productId, name: item.name, price: item.price }
+      cartStore.addProduct(product)
+      for (let i = 1; i < item.quantity; i++) {
+        cartStore.incrementQuantity(product.id)
+      }
     }
+  } catch (err) {
+    repeatError.value = 'No se ha podido repetir este pedido. Inténtalo de nuevo más tarde.'
+    console.error('[OrderHistorySection] Error al repetir el pedido:', err)
   }
 }
 
@@ -63,7 +73,7 @@ function summarizeItems(items) {
   <section class="order-history" aria-label="Historial de pedidos anteriores">
     <h2 class="order-history__title">Historial de mis pedidos anteriores</h2>
 
-    <p v-if="isLoading" class="order-history__status">Cargando tu historial de pedidos...</p>
+    <LoadingSpinner v-if="isLoading" label="Cargando tu historial de pedidos..." />
     <p v-else-if="error" class="order-history__status order-history__status--error">
       {{ error }}
     </p>
@@ -74,6 +84,14 @@ function summarizeItems(items) {
       </p>
 
       <template v-else>
+        <p
+          v-if="repeatError"
+          role="alert"
+          class="order-history__status order-history__status--error"
+        >
+          {{ repeatError }}
+        </p>
+
         <ul class="order-history__list">
           <li v-for="order in orders" :key="order.id" class="order-history__card">
             <div class="order-history__card-header">

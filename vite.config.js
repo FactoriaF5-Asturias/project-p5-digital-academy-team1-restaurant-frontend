@@ -2,6 +2,7 @@ import fs from 'fs'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
+import { configDefaults } from 'vitest/config'
 
 const CERT_KEY_PATH = '../certs/localhost+2-key.pem'
 const CERT_PATH = '../certs/localhost+2.pem'
@@ -24,6 +25,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Los tests E2E de la carpeta e2e/ los ejecuta Playwright, no Vitest.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

@@ -4,7 +4,7 @@
   <main id="productos-carta" class="carta-view">
     <h1 class="carta-view__title">Nuestra carta</h1>
 
-    <p v-if="isLoading" class="carta-view__status">Cargando la carta...</p>
+    <LoadingSpinner v-if="isLoading" label="Cargando la carta..." />
     <p v-else-if="error" class="carta-view__status carta-view__status--error">
       {{ error }}
     </p>
@@ -19,6 +19,7 @@
           v-for="product in products"
           :key="product.id"
           :product="product"
+                    :readonly="isReadOnlyMenu"
           @add-to-cart="handleAddToCart"
         />
       </div>
@@ -34,12 +35,15 @@
 </template>
 
 <script setup>
-import { onMounted } from "vue";
+import { computed, onMounted } from "vue";
 import { useProducts } from "../composables/useProducts";
 import { useCartStore } from "../stores/cart";
+import { useAuthStore } from "../stores/auth";
+import { ROLES } from "../constants/roles";
 import ProductCard from "../components/ProductCard.vue";
 import PaginationControl from "../components/PaginationControl.vue";
 import Hero from "../components/Hero.vue";
+import LoadingSpinner from "../components/LoadingSpinner.vue";
 
 const {
   products,
@@ -51,6 +55,14 @@ const {
   goToPage,
 } = useProducts();
 const cartStore = useCartStore();
+const authStore = useAuthStore();
+
+// Solo el invitado y el cliente pueden hacer pedidos (los mismos que entran en /cesta).
+// Admin, cocina y reparto ven la carta sin cantidad ni botón "Añadir".
+const ROLES_THAT_CAN_ORDER = [ROLES.GUEST, ROLES.CUSTOMER];
+const isReadOnlyMenu = computed(
+  () => !ROLES_THAT_CAN_ORDER.includes(authStore.role),
+);
 
 onMounted(() => {
   fetchProducts(1);

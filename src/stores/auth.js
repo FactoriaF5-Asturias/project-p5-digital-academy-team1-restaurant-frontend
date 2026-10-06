@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authService } from '../services/authService'
 import { profileService } from '../services/profileService'
+import { useCartStore } from './cart'
+import { useLastOrderStore } from './lastOrder'
 
 function extractRole(user) {
   return user?.roles?.[0] ?? null
@@ -15,12 +17,18 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => user.value !== null)
 
+  function forgetPreviousVisitor() {
+    useCartStore().clearCart()
+    useLastOrderStore().clearOrder()
+  }
+
   async function login(credentials) {
     isLoading.value = true
 
     try {
       user.value = await authService.login(credentials)
       role.value = extractRole(user.value)
+      forgetPreviousVisitor()
 
       return user.value
     } finally {
@@ -69,6 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
       await authService.logout()
     } finally {
       clearSession()
+      forgetPreviousVisitor()
     }
   }
 

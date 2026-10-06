@@ -2,14 +2,21 @@
 import { nextTick, ref } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import ProfileFormField from './ProfileFormField.vue'
+import LoadingSpinner from '../LoadingSpinner.vue'
 import { useProfileForm } from './useProfileForm'
+
+const SAVE_MESSAGES = Object.freeze({
+  success: 'Tus datos se han guardado.',
+  conflict: 'Ya existe una cuenta con este email.',
+  invalid: 'Revisa los datos del formulario antes de guardar.',
+  unauthorized: 'No se pudo autorizar el cambio. Comprueba tu sesión.',
+  error: 'No se han podido guardar los cambios. Inténtalo de nuevo.',
+})
 
 const authStore = useAuthStore()
 const formElement = ref(null)
-
 const isSaving = ref(false)
-const successMessage = ref('')
-const errorMessage = ref('')
+const saveFeedback = ref(null)
 
 const {
   fields,
@@ -23,8 +30,7 @@ const {
 } = useProfileForm(() => authStore.user)
 
 function clearMessages() {
-  successMessage.value = ''
-  errorMessage.value = ''
+  saveFeedback.value = null
 }
 
 function handleDictation(field, transcript) {
@@ -36,6 +42,8 @@ function handleDictation(field, transcript) {
 }
 
 function handleReset() {
+  if (isSaving.value) return
+
   resetForm()
   clearMessages()
 }
@@ -73,22 +81,25 @@ async function handleSubmit() {
     await authStore.updateProfile(profile)
     await nextTick()
 
-    successMessage.value = 'Perfil actualizado correctamente.'
+    saveFeedback.value = {
+      type: 'success',
+      message: SAVE_MESSAGES.success,
+    }
   } catch (error) {
     const status = error.response?.status
+    let message = SAVE_MESSAGES.error
 
     if (status === 409) {
-      errorMessage.value =
-        'Ese correo ya está en uso o existe un conflicto de datos.'
+      message = SAVE_MESSAGES.conflict
     } else if (status === 400) {
-      errorMessage.value =
-        'Revisa los datos del formulario antes de guardar.'
+      message = SAVE_MESSAGES.invalid
     } else if (status === 401 || status === 403) {
-      errorMessage.value =
-        'No se pudo autorizar el cambio. Comprueba tu sesión.'
-    } else {
-      errorMessage.value =
-        'No se pudo guardar el perfil. Inténtalo de nuevo.'
+      message = SAVE_MESSAGES.unauthorized
+    }
+
+    saveFeedback.value = {
+      type: 'error',
+      message,
     }
   } finally {
     isSaving.value = false
@@ -103,13 +114,10 @@ async function handleSubmit() {
   >
     <h2 class="profile-form__title">Datos personales</h2>
 
-    <p
+    <LoadingSpinner
       v-if="authStore.isFetchingUser"
-      class="profile-form__notice"
-      role="status"
-    >
-      Cargando tus datos…
-    </p>
+      label="Cargando tus datos…"
+    />
 
     <p
       v-else-if="!authStore.user"
@@ -155,19 +163,14 @@ async function handleSubmit() {
       </p>
 
       <p
-        v-if="successMessage"
-        class="profile-form__notice"
-        role="status"
+        v-if="saveFeedback"
+        :class="[
+          'profile-form__feedback',
+          `profile-form__feedback--${saveFeedback.type}`,
+        ]"
+        :role="saveFeedback.type === 'error' ? 'alert' : 'status'"
       >
-        {{ successMessage }}
-      </p>
-
-      <p
-        v-if="errorMessage"
-        class="profile-form__error"
-        role="alert"
-      >
-        {{ errorMessage }}
+        {{ saveFeedback.message }}
       </p>
 
       <div class="profile-form__actions">
@@ -216,8 +219,16 @@ async function handleSubmit() {
   @apply text-sm text-on-surface;
 }
 
-.profile-form__error {
-  @apply text-sm text-red-700;
+.profile-form__feedback {
+  @apply text-sm font-medium;
+}
+
+.profile-form__feedback--success {
+  @apply text-secondary;
+}
+
+.profile-form__feedback--error {
+  @apply text-error;
 }
 
 .profile-form__actions {
@@ -233,7 +244,7 @@ async function handleSubmit() {
 
 .profile-form__submit {
   @apply rounded-lg bg-primary px-6 py-3
-    font-semibold text-white transition;
+    font-semibold text-white transition cursor-pointer hover:opacity-90;
 }
 
 .profile-form__submit:disabled,

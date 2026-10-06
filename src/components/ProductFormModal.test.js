@@ -11,7 +11,6 @@ function buildProduct(overrides = {}) {
     category: 'ROLLS',
     imageUrl: 'react-roll.png',
     price: 7.9,
-    stock: 20,
     description: 'Roll de sushi fresco',
     ...overrides,
   }
@@ -32,7 +31,6 @@ async function fillCreateForm(wrapper) {
   await wrapper.find('#product-image').setValue('merge-nigiri.png')
   await wrapper.find('#product-category').setValue('NIGIRI')
   await wrapper.find('#product-price').setValue('6.50')
-  await wrapper.find('#product-stock').setValue('20')
   await wrapper.find('#product-description').setValue('Nigiri de salmón')
 }
 
@@ -59,7 +57,6 @@ describe('ProductFormModal', () => {
           category: 'NIGIRI',
           imageUrl: 'merge-nigiri.png',
           price: 6.5,
-          stock: 20,
           description: 'Nigiri de salmón',
         },
       ])
@@ -96,12 +93,6 @@ describe('ProductFormModal', () => {
       expect(wrapper.find('#product-price').element.value).toBe('7.9')
     })
 
-    it('uses 0 as stock when the product has no stock yet', () => {
-      const wrapper = mountEditForm(buildProduct({ stock: undefined }))
-
-      expect(wrapper.find('#product-stock').element.value).toBe('0')
-    })
-
     it('only shows the save button after changing something', async () => {
       const wrapper = mountEditForm()
       expect(wrapper.find('button[type="submit"]').exists()).toBe(false)
@@ -121,31 +112,19 @@ describe('ProductFormModal', () => {
     })
   })
 
-  describe('stock buttons', () => {
-    it('increases the stock by one', async () => {
-      const wrapper = mountEditForm(buildProduct({ stock: 3 }))
-
-      await wrapper.find('button[aria-label="Aumentar stock"]').trigger('click')
-
-      expect(wrapper.find('#product-stock').element.value).toBe('4')
+  describe('stock', () => {
+    it('does not show a stock field in create or edit mode', () => {
+      expect(mountCreateForm().find('#product-stock').exists()).toBe(false)
+      expect(mountEditForm().find('#product-stock').exists()).toBe(false)
     })
 
-    it('decreases the stock by one but never below zero', async () => {
-      const wrapper = mountEditForm(buildProduct({ stock: 1 }))
-      const decreaseButton = wrapper.find('button[aria-label="Disminuir stock"]')
-
-      await decreaseButton.trigger('click')
-      await decreaseButton.trigger('click')
-
-      expect(wrapper.find('#product-stock').element.value).toBe('0')
-    })
-
-    it('starts from zero when the stock field is empty', async () => {
+    it('does not send stock when saving', async () => {
       const wrapper = mountCreateForm()
+      await fillCreateForm(wrapper)
 
-      await wrapper.find('button[aria-label="Aumentar stock"]').trigger('click')
+      await wrapper.find('form').trigger('submit.prevent')
 
-      expect(wrapper.find('#product-stock').element.value).toBe('1')
+      expect(wrapper.emitted('submit')[0][0]).not.toHaveProperty('stock')
     })
   })
 

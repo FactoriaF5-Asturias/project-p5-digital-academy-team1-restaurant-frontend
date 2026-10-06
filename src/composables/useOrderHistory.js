@@ -38,7 +38,8 @@ export function useOrderHistory() {
     error.value = null
 
     try {
-      const result = await getOrderHistory(userId, {
+      const result = await getOrderHistory({
+        userId,
         page,
         size: PAGE_SIZE,
       })

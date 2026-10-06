@@ -1,15 +1,19 @@
 import api from './api'
 
-export async function getOrderHistory(
+const USERS_ENDPOINT = '/api/v1/users'
+const ORDERS_ENDPOINT = '/api/v1/orders'
+
+export async function getOrderHistory({
   userId,
-  { page = 1, size = 3 } = {},
-) {
+  page = 1,
+  size = 3,
+} = {}) {
   if (!userId) {
     throw new Error('No authenticated user available')
   }
 
   const { data } = await api.get(
-    `/api/v1/users/${userId}/orders`,
+    `${USERS_ENDPOINT}/${userId}/orders`,
     {
       params: {
         page: page - 1,
@@ -25,4 +29,12 @@ export async function getOrderHistory(
     totalItems: data.page.totalElements,
     totalPages: Math.max(1, data.page.totalPages),
   }
+}
+
+export async function getRepeatOrderItems(orderId) {
+  const { data } = await api.get(
+    `${ORDERS_ENDPOINT}/${orderId}/repeat`,
+  )
+
+  return data
 }

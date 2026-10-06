@@ -83,7 +83,7 @@ describe("useCartStore", () => {
     const cartStore = useCartStore();
     const offersStore = useExclusiveOffersStore();
     offersStore.offers = [
-      { productId: productA.id, finalPrice: 8.5, discountRate: 15, expiresAt: null },
+      { used: false, finalPrice: 8.5, discountRate: 15, product: { id: productA.id } },
     ];
 
     cartStore.addProduct(productA);

@@ -1,23 +1,35 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+} from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useExclusiveOffersStore } from './exclusiveOffers'
-import { getExclusiveOffers } from '../services/exclusiveOffers.service'
+import {
+  getExclusiveOffers,
+  consumeOffer,
+} from '../services/offers.service'
 
-vi.mock('../services/exclusiveOffers.service', () => ({
+vi.mock('../services/offers.service', () => ({
   getExclusiveOffers: vi.fn(),
+  consumeOffer: vi.fn(),
 }))
 
 function buildOffer(overrides = {}) {
   return {
-    id: 'offer-a',
-    productId: 1,
-    productName: 'Hello Edamame',
-    discountPercentage: 15,
+    id: 1,
+    product: {
+      id: 1,
+      name: 'Hello Edamame',
+    },
+    discountRate: 15,
     originalPrice: 10,
     finalPrice: 8.5,
-    couponCode: 'test-coupon',
+    coupon: 'coupon-a',
     used: false,
-    expiresAt: null,
     ...overrides,
   }
 }
@@ -27,9 +39,11 @@ describe('useExclusiveOffersStore', () => {
     setActivePinia(createPinia())
     vi.resetAllMocks()
 
-    getExclusiveOffers.mockResolvedValue({
-      offers: [],
-    })
+    getExclusiveOffers.mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('starts empty', () => {
@@ -40,44 +54,22 @@ describe('useExclusiveOffersStore', () => {
     expect(store.error).toBeNull()
   })
 
-  it('keeps offers without expiry and excludes expired offers', () => {
+  it('excludes used offers from active offers', () => {
     const store = useExclusiveOffersStore()
 
     store.offers = [
-      buildOffer({ id: 'a' }),
-      buildOffer({
-        id: 'b',
-        expiresAt: '2099-01-01T00:00:00',
-      }),
-      buildOffer({
-        id: 'c',
-        expiresAt: '2000-01-01T00:00:00',
-      }),
+      buildOffer({ id: 1 }),
+      buildOffer({ id: 2 }),
+      buildOffer({ id: 3, used: true }),
     ]
 
     expect(store.activeOffers.map((offer) => offer.id)).toEqual([
-      'a',
-      'b',
+      1,
+      2,
     ])
   })
 
-  it('excludes used offers even when they have not expired', () => {
-    const store = useExclusiveOffersStore()
-
-    store.offers = [
-      buildOffer({ id: 'available' }),
-      buildOffer({
-        id: 'used',
-        used: true,
-      }),
-    ]
-
-    expect(store.activeOffers.map((offer) => offer.id)).toEqual([
-      'available',
-    ])
-  })
-
-  it('returns the active offer for a product with its backend price', () => {
+  it('returns the active product offer with its backend price', () => {
     const store = useExclusiveOffersStore()
     const offer = buildOffer()
 
@@ -87,7 +79,7 @@ describe('useExclusiveOffersStore', () => {
     expect(store.offerForProduct(1).finalPrice).toBe(8.5)
   })
 
-  it('returns null when the product has no offer', () => {
+  it('returns null when a product has no offer', () => {
     const store = useExclusiveOffersStore()
 
     store.offers = [buildOffer()]
@@ -95,46 +87,29 @@ describe('useExclusiveOffersStore', () => {
     expect(store.offerForProduct(999)).toBeNull()
   })
 
-  it('returns null when the product offer has expired', () => {
-    const store = useExclusiveOffersStore()
-
-    store.offers = [
-      buildOffer({
-        expiresAt: '2000-01-01T00:00:00',
-      }),
-    ]
-
-    expect(store.offerForProduct(1)).toBeNull()
-  })
-
   it('returns null when the product offer has been used', () => {
     const store = useExclusiveOffersStore()
 
     store.offers = [
-      buildOffer({
-        used: true,
-      }),
+      buildOffer({ used: true }),
     ]
 
     expect(store.offerForProduct(1)).toBeNull()
   })
 
-  it('finds an unused offer when another offer for the same product is used', () => {
+  it('finds an unused offer when another offer for the product is used', () => {
     const store = useExclusiveOffersStore()
-    const availableOffer = buildOffer({ id: 'available' })
+    const availableOffer = buildOffer({ id: 2 })
 
     store.offers = [
-      buildOffer({
-        id: 'used',
-        used: true,
-      }),
+      buildOffer({ id: 1, used: true }),
       availableOffer,
     ]
 
     expect(store.offerForProduct(1)).toEqual(availableOffer)
   })
 
-  it('sets loading while fetching and clears it afterwards', async () => {
+  it('sets loading during fetching and clears it afterwards', async () => {
     const store = useExclusiveOffersStore()
 
     const promise = store.fetchOffers()
@@ -150,9 +125,7 @@ describe('useExclusiveOffersStore', () => {
   it('stores fetched offers without changing their prices', async () => {
     const fetchedOffers = [buildOffer()]
 
-    getExclusiveOffers.mockResolvedValue({
-      offers: fetchedOffers,
-    })
+    getExclusiveOffers.mockResolvedValue(fetchedOffers)
 
     const store = useExclusiveOffersStore()
 
@@ -185,9 +158,7 @@ describe('useExclusiveOffersStore', () => {
 
     getExclusiveOffers
       .mockRejectedValueOnce(new Error('Network error'))
-      .mockResolvedValueOnce({
-        offers: fetchedOffers,
-      })
+      .mockResolvedValueOnce(fetchedOffers)
 
     const store = useExclusiveOffersStore()
 
@@ -219,13 +190,69 @@ describe('useExclusiveOffersStore', () => {
     expect(getExclusiveOffers).toHaveBeenCalledTimes(1)
     expect(store.isLoading).toBe(true)
 
-    resolveRequest({
-      offers: [buildOffer()],
-    })
+    resolveRequest([buildOffer()])
 
     await firstRequest
 
     expect(store.isLoading).toBe(false)
     expect(store.offers).toHaveLength(1)
+  })
+
+  it('replaces the consumed offer and removes it from active offers', async () => {
+    const updatedOffer = buildOffer({ used: true })
+
+    consumeOffer.mockResolvedValue(updatedOffer)
+
+    const store = useExclusiveOffersStore()
+    store.offers = [buildOffer()]
+
+    await store.consumeOffer('coupon-a')
+
+    expect(consumeOffer).toHaveBeenCalledWith('coupon-a')
+    expect(store.offers[0]).toEqual(updatedOffer)
+    expect(store.activeOffers).toEqual([])
+    expect(store.offerForProduct(1)).toBeNull()
+  })
+
+  it('preserves other offers when consuming one', async () => {
+    const otherOffer = buildOffer({
+      id: 2,
+      coupon: 'coupon-b',
+      product: {
+        id: 2,
+        name: 'Kaisen Init',
+      },
+    })
+
+    consumeOffer.mockResolvedValue(
+      buildOffer({ used: true }),
+    )
+
+    const store = useExclusiveOffersStore()
+    store.offers = [buildOffer(), otherOffer]
+
+    await store.consumeOffer('coupon-a')
+
+    expect(store.offers[1]).toEqual(otherOffer)
+    expect(store.activeOffers).toEqual([otherOffer])
+  })
+
+  it('does not throw or change offers when consuming fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    consumeOffer.mockRejectedValue(
+      new Error('Network error'),
+    )
+
+    const store = useExclusiveOffersStore()
+    const originalOffer = buildOffer()
+    store.offers = [originalOffer]
+
+    await expect(
+      store.consumeOffer('coupon-a'),
+    ).resolves.toBeUndefined()
+
+    expect(store.offers[0]).toEqual(originalOffer)
+    expect(store.activeOffers).toEqual([originalOffer])
   })
 })

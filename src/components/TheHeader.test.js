@@ -77,7 +77,7 @@ describe('TheHeader', () => {
     cartStore.items = []
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.find('.rounded-full').exists()).toBe(false)
+    expect(wrapper.find('.nav-links__badge').exists()).toBe(false)
   })
 
   it('camino feliz: muestra el total de unidades cuando hay productos en la cesta', async () => {
@@ -91,7 +91,7 @@ describe('TheHeader', () => {
 
     await wrapper.vm.$nextTick()
 
-    const badge = wrapper.find('.rounded-full')
+    const badge = wrapper.find('.nav-links__badge')
 
     expect(badge.exists()).toBe(true)
     expect(badge.text()).toBe('5')
@@ -107,7 +107,7 @@ describe('TheHeader', () => {
     const { wrapper } = await mountHeader()
 
     const menuButton = wrapper.find(
-      'button[aria-label="Abrir menú de navegación"]'
+      'button[aria-label="Menú de navegación"]'
     )
 
     await menuButton.trigger('click')
@@ -119,7 +119,7 @@ describe('TheHeader', () => {
     const { wrapper } = await mountHeader()
 
     const menuButton = wrapper.find(
-      'button[aria-label="Abrir menú de navegación"]'
+      'button[aria-label="Menú de navegación"]'
     )
 
     await menuButton.trigger('click')
@@ -132,7 +132,7 @@ describe('TheHeader', () => {
     const { wrapper } = await mountHeader()
 
     const menuButton = wrapper.find(
-      'button[aria-label="Abrir menú de navegación"]'
+      'button[aria-label="Menú de navegación"]'
     )
 
     await menuButton.trigger('click')
@@ -152,7 +152,7 @@ describe('TheHeader', () => {
     const { wrapper } = await mountHeader()
 
     await wrapper
-      .find('button[aria-label="Abrir menú de navegación"]')
+      .find('button[aria-label="Menú de navegación"]')
       .trigger('click')
 
     const mobileLinks = wrapper
@@ -174,7 +174,7 @@ describe('TheHeader', () => {
     const { wrapper } = await mountHeader()
 
     const menuButton = wrapper.find(
-      'button[aria-label="Abrir menú de navegación"]'
+      'button[aria-label="Menú de navegación"]'
     )
 
     await menuButton.trigger('click')
@@ -187,6 +187,20 @@ describe('TheHeader', () => {
     await perfilLink.trigger('click')
 
     expect(wrapper.findAll('nav').length).toBe(1)
+  })
+
+  it('el botón de menú indica si está abierto y qué menú controla', async () => {
+    const { wrapper } = await mountHeader()
+
+    const menuButton = wrapper.find('button[aria-label="Menú de navegación"]')
+
+    expect(menuButton.attributes('aria-expanded')).toBe('false')
+    expect(menuButton.attributes('aria-controls')).toBe('mobile-navigation')
+
+    await menuButton.trigger('click')
+
+    expect(menuButton.attributes('aria-expanded')).toBe('true')
+    expect(wrapper.find('#mobile-navigation').exists()).toBe(true)
   })
 
   it('muestra los enlaces de iniciar sesión y registrarse', async () => {

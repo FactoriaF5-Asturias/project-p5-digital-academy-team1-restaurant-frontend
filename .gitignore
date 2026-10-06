@@ -27,4 +27,9 @@ coverage
 .env
 .env.*
 !.env.example
+!.env.e2e.example
+
+# Resultados de Playwright (E2E)
+test-results/
+playwright-report/
 

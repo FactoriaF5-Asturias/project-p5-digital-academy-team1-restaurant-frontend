@@ -10,7 +10,6 @@ function buildProduct(overrides = {}) {
     category: 'ROLLS',
     price: 7.9,
     available: true,
-    stock: 20,
     ...overrides,
   }
 }
@@ -49,23 +48,21 @@ describe('AdminProductsTable', () => {
     expect(wrapper.find('.products-table__toggle-button').text()).toBe('Activar')
   })
 
-  it('marks the stock as low when it is 5 units or less', () => {
-    const wrapper = mountTable([buildProduct({ stock: 5 })])
+  it('does not show a stock column', () => {
+    const wrapper = mountTable()
 
-    expect(wrapper.find('.products-table__badge--low-stock').exists()).toBe(true)
+    const headers = wrapper.findAll('th').map((header) => header.text())
+
+    expect(headers).toEqual(['Producto', 'Categoría', 'Precio', 'Estado', 'Acciones'])
+    expect(wrapper.text()).not.toContain('uds.')
   })
 
-  it('does not mark the stock as low when it is above 5 units', () => {
-    const wrapper = mountTable([buildProduct({ stock: 6 })])
+  it('the empty message spans every column of the table', () => {
+    const wrapper = mountTable([])
 
-    expect(wrapper.find('.products-table__badge--low-stock').exists()).toBe(false)
-  })
+    const columns = wrapper.findAll('th').length
 
-  it('shows a dash when the backend does not send the stock', () => {
-    const wrapper = mountTable([buildProduct({ stock: undefined })])
-
-    expect(wrapper.text()).toContain('— uds.')
-    expect(wrapper.find('.products-table__badge--low-stock').exists()).toBe(false)
+    expect(wrapper.find('.products-table__empty').attributes('colspan')).toBe(String(columns))
   })
 
   it('emits toggle-availability, edit and delete with the clicked product', async () => {

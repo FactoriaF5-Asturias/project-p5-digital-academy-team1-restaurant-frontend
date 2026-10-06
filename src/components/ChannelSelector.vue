@@ -1,9 +1,13 @@
 <script setup>
 import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCheckoutStore } from '../stores/checkout'
+import { useAuthStore } from '../stores/auth'
 import { useTableDetection } from '../composables/useTableDetection'
 
 const checkoutStore = useCheckoutStore()
+const authStore = useAuthStore()
+const router = useRouter()
 const { isLoading: isDetectingTable, error: tableDetectionError, detectTable } = useTableDetection()
 
 // Solo se intenta detectar la mesa al cargar la Cesta: si el canal ya es
@@ -14,6 +18,16 @@ onMounted(() => {
     detectTable()
   }
 })
+
+// Pedir a domicilio exige cuenta: si no hay sesión, se redirige a login en
+// vez de cambiar el canal. Con sesión, el comportamiento es el de siempre.
+function selectHomeDeliveryChannel() {
+  if (!authStore.isAuthenticated) {
+    router.push({ name: 'login' })
+    return
+  }
+  checkoutStore.setChannel('domicilio')
+}
 
 // Cada campo se expone como un computed con get/set: lee del store
 // y, al escribir (por ejemplo desde v-model), llama a la acción correspondiente.
@@ -59,7 +73,7 @@ const postalCode = computed({
         class="channel-selector__toggle-btn"
         :class="{ 'channel-selector__toggle-btn--active': checkoutStore.channel === 'domicilio' }"
         :aria-pressed="checkoutStore.channel === 'domicilio'"
-        @click="checkoutStore.setChannel('domicilio')"
+        @click="selectHomeDeliveryChannel"
       >
         A domicilio
       </button>

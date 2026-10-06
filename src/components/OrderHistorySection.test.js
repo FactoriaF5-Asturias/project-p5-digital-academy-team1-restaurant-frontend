@@ -1,14 +1,25 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+} from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import OrderHistorySection from './OrderHistorySection.vue'
 import PaginationControl from './PaginationControl.vue'
-import { getOrderHistory } from '../services/orderHistory.service'
+import {
+  getOrderHistory,
+  getRepeatOrderItems,
+} from '../services/orderHistory.service'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 
 vi.mock('../services/orderHistory.service', () => ({
   getOrderHistory: vi.fn(),
+  getRepeatOrderItems: vi.fn(),
 }))
 
 let wrappers = []
@@ -40,42 +51,27 @@ function buildResult(overrides = {}) {
 }
 
 function buildResultWithUnavailableProduct() {
-  return buildResult({
-    items: [
-      {
-        id: 101,
-        date: '2026-09-20T21:10:00',
-        items: [
-          {
-            productId: 3,
-            name: 'Kaisen Init',
-            quantity: 2,
-            price: 6.5,
-            available: true,
-          },
-          {
-            productId: 27,
-            name: 'Caesar Commit',
-            quantity: 1,
-            price: 6.9,
-            available: false,
-          },
-        ],
-        total: 19.9,
-      },
-    ],
+  const result = buildResult()
+
+  result.items[0].items.push({
+    productId: 27,
+    name: 'Caesar Commit',
+    quantity: 1,
+    price: 6.9,
+    available: false,
   })
+
+  result.items[0].total = 19.9
+
+  return result
 }
 
-function mountOrderHistorySection() {
+function mountSection() {
   const pinia = createPinia()
   setActivePinia(pinia)
 
-  const authStore = useAuthStore()
-
-  authStore.user = {
+  useAuthStore().user = {
     id: 'test-user',
-    firstName: 'Ana',
     roles: ['ROLE_CUSTOMER'],
   }
 
@@ -98,28 +94,37 @@ describe('OrderHistorySection', () => {
     localStorage.clear()
 
     getOrderHistory.mockResolvedValue(buildResult())
+
+    getRepeatOrderItems.mockResolvedValue([
+      {
+        productId: 3,
+        name: 'Kaisen Init',
+        price: 6.5,
+        quantity: 2,
+      },
+    ])
   })
 
   afterEach(() => {
     wrappers.forEach((wrapper) => wrapper.unmount())
     wrappers = []
+
+    vi.restoreAllMocks()
   })
 
   it('requests the authenticated user history', async () => {
-    mountOrderHistorySection()
+    mountSection()
 
     await flushPromises()
 
-    expect(getOrderHistory).toHaveBeenCalledWith(
-      'test-user',
-      {
-        page: 1,
-        size: 3,
-      },
-    )
+    expect(getOrderHistory).toHaveBeenCalledWith({
+      userId: 'test-user',
+      page: 1,
+      size: 3,
+    })
   })
 
-  it('shows a loading message while fetching', async () => {
+  it('shows loading while fetching', async () => {
     let resolveRequest
 
     getOrderHistory.mockReturnValue(
@@ -128,7 +133,7 @@ describe('OrderHistorySection', () => {
       }),
     )
 
-    const { wrapper } = mountOrderHistorySection()
+    const { wrapper } = mountSection()
 
     await flushPromises()
 
@@ -145,12 +150,12 @@ describe('OrderHistorySection', () => {
     )
   })
 
-  it('shows an error message when the request fails', async () => {
+  it('shows an error when fetching fails', async () => {
     getOrderHistory.mockRejectedValue(
       new Error('Network error'),
     )
 
-    const { wrapper } = mountOrderHistorySection()
+    const { wrapper } = mountSection()
 
     await flushPromises()
 
@@ -159,7 +164,7 @@ describe('OrderHistorySection', () => {
     )
   })
 
-  it('shows an empty message when there are no previous orders', async () => {
+  it('shows the empty state when there are no orders', async () => {
     getOrderHistory.mockResolvedValue(
       buildResult({
         items: [],
@@ -167,7 +172,7 @@ describe('OrderHistorySection', () => {
       }),
     )
 
-    const { wrapper } = mountOrderHistorySection()
+    const { wrapper } = mountSection()
 
     await flushPromises()
 
@@ -176,28 +181,26 @@ describe('OrderHistorySection', () => {
     )
   })
 
-  it('renders a summarised card for each previous order', async () => {
-    const { wrapper } = mountOrderHistorySection()
+  it('renders an order summary', async () => {
+    const { wrapper } = mountSection()
 
     await flushPromises()
 
     expect(wrapper.text()).toContain('2× Kaisen Init')
   })
 
-  it('hides the show-all button when there are 3 or fewer orders', async () => {
+  it('hides show all when there are three or fewer orders', async () => {
     getOrderHistory.mockResolvedValue(
-      buildResult({
-        totalItems: 3,
-      }),
+      buildResult({ totalItems: 3 }),
     )
 
-    const { wrapper } = mountOrderHistorySection()
+    const { wrapper } = mountSection()
 
     await flushPromises()
 
-    expect(wrapper.text()).not.toContain(
-      'Ver todos los pedidos anteriores',
-    )
+    expect(
+      wrapper.find('.order-history__show-all-btn').exists(),
+    ).toBe(false)
   })
 
   it('reveals pagination after clicking show all', async () => {
@@ -208,7 +211,7 @@ describe('OrderHistorySection', () => {
       }),
     )
 
-    const { wrapper } = mountOrderHistorySection()
+    const { wrapper } = mountSection()
 
     await flushPromises()
 
@@ -220,14 +223,12 @@ describe('OrderHistorySection', () => {
       .get('.order-history__show-all-btn')
       .trigger('click')
 
-    await flushPromises()
-
     expect(
       wrapper.findComponent(PaginationControl).exists(),
     ).toBe(true)
   })
 
-  it('fetches the selected page from the pagination control', async () => {
+  it('fetches the page selected in pagination', async () => {
     getOrderHistory.mockResolvedValueOnce(
       buildResult({
         totalItems: 5,
@@ -235,7 +236,7 @@ describe('OrderHistorySection', () => {
       }),
     )
 
-    const { wrapper } = mountOrderHistorySection()
+    const { wrapper } = mountSection()
 
     await flushPromises()
 
@@ -257,42 +258,81 @@ describe('OrderHistorySection', () => {
 
     await flushPromises()
 
-    expect(getOrderHistory).toHaveBeenLastCalledWith(
-      'test-user',
-      {
-        page: 2,
-        size: 3,
-      },
-    )
+    expect(getOrderHistory).toHaveBeenLastCalledWith({
+      userId: 'test-user',
+      page: 2,
+      size: 3,
+    })
 
     expect(
       wrapper.getComponent(PaginationControl).props('currentPage'),
     ).toBe(2)
   })
 
-  it('adds repeated order lines to the cart with their quantities', async () => {
-    const { wrapper, cartStore } = mountOrderHistorySection()
+  it('repeats an order using current backend prices and quantities', async () => {
+    getRepeatOrderItems.mockResolvedValue([
+      {
+        productId: 3,
+        name: 'Kaisen Init',
+        price: 7,
+        quantity: 2,
+      },
+    ])
+
+    const { wrapper, cartStore } = mountSection()
 
     await flushPromises()
 
-    await wrapper
-      .get('.order-history__repeat-btn')
-      .trigger('click')
+    await wrapper.get('.order-history__repeat-btn').trigger('click')
+    await flushPromises()
+
+    expect(getRepeatOrderItems).toHaveBeenCalledWith(101)
 
     expect(cartStore.items).toEqual([
       {
         product: {
           id: 3,
           name: 'Kaisen Init',
-          price: 6.5,
+          price: 7,
         },
         quantity: 2,
       },
     ])
   })
 
+  it('shows a repeat error without changing the cart', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    getRepeatOrderItems.mockRejectedValue(
+      new Error('Network error'),
+    )
+
+    const { wrapper, cartStore } = mountSection()
+
+    cartStore.addProduct({
+      id: 99,
+      name: 'Existing product',
+      price: 4,
+    })
+
+    const previousItems = JSON.parse(
+      JSON.stringify(cartStore.items),
+    )
+
+    await flushPromises()
+
+    await wrapper.get('.order-history__repeat-btn').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toContain(
+      'No se ha podido repetir este pedido',
+    )
+
+    expect(cartStore.items).toEqual(previousItems)
+  })
+
   it('does not warn when every product is available', async () => {
-    const { wrapper } = mountOrderHistorySection()
+    const { wrapper } = mountSection()
 
     await flushPromises()
 
@@ -301,12 +341,12 @@ describe('OrderHistorySection', () => {
     ).toBe(false)
   })
 
-  it('warns when an order includes an unavailable product', async () => {
+  it('warns when an order contains an unavailable product', async () => {
     getOrderHistory.mockResolvedValue(
       buildResultWithUnavailableProduct(),
     )
 
-    const { wrapper } = mountOrderHistorySection()
+    const { wrapper } = mountSection()
 
     await flushPromises()
 
@@ -315,18 +355,19 @@ describe('OrderHistorySection', () => {
     ).toBe(true)
   })
 
-  it('excludes unavailable products when repeating an order', async () => {
+  it('adds only the products returned by the repeat endpoint', async () => {
     getOrderHistory.mockResolvedValue(
       buildResultWithUnavailableProduct(),
     )
 
-    const { wrapper, cartStore } = mountOrderHistorySection()
+    const { wrapper, cartStore } = mountSection()
 
     await flushPromises()
 
-    await wrapper
-      .get('.order-history__repeat-btn')
-      .trigger('click')
+    await wrapper.get('.order-history__repeat-btn').trigger('click')
+    await flushPromises()
+
+    expect(getRepeatOrderItems).toHaveBeenCalledWith(101)
 
     expect(cartStore.items).toEqual([
       {

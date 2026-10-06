@@ -16,14 +16,6 @@ describe('PaymentSelector', () => {
     setActivePinia(createPinia())
   })
 
-  it('does not render when the channel is domicilio', async () => {
-    const { wrapper, checkoutStore } = mountPaymentSelector()
-    checkoutStore.channel = 'domicilio'
-    await flushPromises()
-
-    expect(wrapper.find('.payment-selector').exists()).toBe(false)
-  })
-
   it('renders both dine-in payment options when the channel is sala', () => {
     const { wrapper } = mountPaymentSelector()
 
@@ -31,6 +23,17 @@ describe('PaymentSelector', () => {
     expect(options).toHaveLength(2)
     expect(options[0].text()).toBe('Pago en caja')
     expect(options[1].text()).toBe('Tarjeta en mesa')
+  })
+
+  it('renders both home delivery payment options when the channel is domicilio', async () => {
+    const { wrapper, checkoutStore } = mountPaymentSelector()
+    checkoutStore.channel = 'domicilio'
+    await flushPromises()
+
+    const options = wrapper.findAll('.payment-selector__option')
+    expect(options).toHaveLength(2)
+    expect(options[0].text()).toBe('Tarjeta online')
+    expect(options[1].text()).toBe('Efectivo a la entrega')
   })
 
   it('shows a hint instead of a status when no payment method is selected yet', () => {
@@ -57,6 +60,20 @@ describe('PaymentSelector', () => {
 
     expect(wrapper.find('.payment-selector__status').text()).toBe(
       'Se marcará como: pago pendiente en mesa',
+    )
+  })
+
+  it('selects a home delivery payment method and updates the store when an option is clicked', async () => {
+    const { wrapper, checkoutStore } = mountPaymentSelector()
+    checkoutStore.channel = 'domicilio'
+    await flushPromises()
+
+    const options = wrapper.findAll('.payment-selector__option')
+    await options[1].trigger('click')
+
+    expect(checkoutStore.paymentMethod).toBe('cashOnDelivery')
+    expect(wrapper.find('.payment-selector__status').text()).toBe(
+      'Se marcará como: pendiente de cobro por el repartidor',
     )
   })
 })

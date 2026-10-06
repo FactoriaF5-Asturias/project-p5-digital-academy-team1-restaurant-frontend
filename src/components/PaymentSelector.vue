@@ -1,9 +1,14 @@
 <script setup>
 import { computed } from 'vue'
 import { useCheckoutStore } from '../stores/checkout'
-import { DINE_IN_PAYMENT_METHODS } from '../constants/paymentMethods'
+import { DINE_IN_PAYMENT_METHODS, HOME_DELIVERY_PAYMENT_METHODS } from '../constants/paymentMethods'
 
 const checkoutStore = useCheckoutStore()
+
+// Según el canal elegido, la lista de métodos válidos es una u otra.
+const availableMethods = computed(() =>
+  checkoutStore.channel === 'sala' ? DINE_IN_PAYMENT_METHODS : HOME_DELIVERY_PAYMENT_METHODS,
+)
 
 const selectedPaymentMethod = computed({
   get: () => checkoutStore.paymentMethod,
@@ -11,16 +16,16 @@ const selectedPaymentMethod = computed({
 })
 
 const selectedMethodDetails = computed(() =>
-  DINE_IN_PAYMENT_METHODS.find((method) => method.value === selectedPaymentMethod.value),
+   availableMethods.value.find((method) => method.value === selectedPaymentMethod.value),
 )
 </script>
 
 <template>
-  <section v-if="checkoutStore.channel === 'sala'" class="payment-selector" aria-label="Método de pago">
+  <section class="payment-selector" aria-label="Método de pago">
     <h2 class="payment-selector__title">Método de pago</h2>
     <div class="payment-selector__options" role="radiogroup" aria-label="Selecciona un método de pago">
       <button
-        v-for="method in DINE_IN_PAYMENT_METHODS"
+        v-for="method in availableMethods"
         :key="method.value"
         type="button"
         class="payment-selector__option"
@@ -37,7 +42,6 @@ const selectedMethodDetails = computed(() =>
     </p>
     <p v-else class="payment-selector__hint">Selecciona un método de pago para continuar.</p>
   </section>
-  <!-- El canal "domicilio" (tarjeta online / efectivo a la entrega) es responsabilidad de otra historia (GSF-10) -->
 </template>
 
 <style scoped>

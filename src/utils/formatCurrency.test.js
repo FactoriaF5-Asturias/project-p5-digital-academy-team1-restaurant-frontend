@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatCurrency } from './formatCurrency'
+import { formatCurrency, formatRoundedCurrency } from './formatCurrency'
 
 // Intl usa un espacio especial antes del símbolo €, por eso se normaliza.
 const normalizeSpaces = (text) => text.replace(/\s/g, ' ')
@@ -15,5 +15,15 @@ describe('formatCurrency', () => {
 
   it('formats zero', () => {
     expect(normalizeSpaces(formatCurrency(0))).toBe('0,00 €')
+  })
+})
+
+describe('formatRoundedCurrency', () => {
+  it('rounds to whole euros without decimals', () => {
+    expect(normalizeSpaces(formatRoundedCurrency(482.5))).toBe('483 €')
+  })
+
+  it('formats zero without decimals', () => {
+    expect(normalizeSpaces(formatRoundedCurrency(0))).toBe('0 €')
   })
 })

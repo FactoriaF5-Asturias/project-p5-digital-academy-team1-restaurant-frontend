@@ -1,4 +1,6 @@
 <script setup>
+import LoadingSpinner from './LoadingSpinner.vue'
+
 defineProps({
   metrics: {
     type: Object,
@@ -19,12 +21,11 @@ defineProps({
   <section>
     <h1 class="mb-6">Dashboard de Cocina</h1>
 
-    <p
+    <LoadingSpinner
       v-if="isLoading"
-      class="card p-6 text-on-surface-variant"
-    >
-      Cargando métricas de cocina...
-    </p>
+      class="card"
+      label="Cargando métricas de cocina..."
+    />
 
     <p
       v-else-if="error"

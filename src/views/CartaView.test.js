@@ -7,6 +7,7 @@ import ProductCard from '../components/ProductCard.vue'
 import PaginationControl from '../components/PaginationControl.vue'
 import * as productsService from '../services/products.service'
 import { useCartStore } from '../stores/cart'
+import { useAuthStore } from '../stores/auth'
 
 const routes = [
   { path: '/', name: 'carta', component: { template: '<div>Carta</div>' } },
@@ -147,5 +148,34 @@ describe('CartaView', () => {
     await flushPromises()
 
     expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
+  })
+
+  describe('read-only menu by role', () => {
+    it.each([
+      ['a guest', null],
+      ['a customer', 'ROLE_CUSTOMER'],
+    ])('lets %s add products to the cart', async (_who, role) => {
+      vi.spyOn(productsService, 'getProducts').mockResolvedValue(buildResult())
+      const { wrapper } = await mountCartaView()
+      useAuthStore().role = role
+      await flushPromises()
+
+      expect(wrapper.findComponent(ProductCard).props('readonly')).toBe(false)
+      expect(wrapper.find('.product-card__add-btn').exists()).toBe(true)
+    })
+
+    it.each(['ROLE_ADMIN', 'ROLE_COOK', 'ROLE_DELIVERYMAN'])(
+      'shows the menu without quantity nor add button to %s',
+      async (role) => {
+        vi.spyOn(productsService, 'getProducts').mockResolvedValue(buildResult())
+        const { wrapper } = await mountCartaView()
+        useAuthStore().role = role
+        await flushPromises()
+
+        expect(wrapper.findComponent(ProductCard).props('readonly')).toBe(true)
+        expect(wrapper.text()).toContain('Salmon Roll')
+        expect(wrapper.find('.product-card__add-btn').exists()).toBe(false)
+      }
+    )
   })
 })

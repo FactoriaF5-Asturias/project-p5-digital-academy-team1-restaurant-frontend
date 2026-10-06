@@ -1,9 +1,18 @@
 <script setup>
+import { ref } from 'vue'
 import { useCartStore } from '../stores/cart'
+import { useCheckoutStore } from '../stores/checkout'
+import { HOME_DELIVERY_FEE } from '../constants/delivery'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 // El widget "Tu pedido": lee y opera directamente sobre el store global de la cesta.
 // No recibe props ni emite eventos porque el store es la única fuente de verdad.
+// Antes de quitar un producto pide confirmación con la ventana de la app.
 const cartStore = useCartStore()
+const checkoutStore = useCheckoutStore()
+
+// Línea que se quiere quitar mientras se espera la respuesta del usuario.
+const lineToRemove = ref(null)
 
 const formatCurrency = (value) =>
   value.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })
@@ -12,19 +21,26 @@ function handleIncrease(productId) {
   cartStore.incrementQuantity(productId)
 }
 
+// Con 1 unidad, bajar la cantidad es quitar el producto: se pide confirmación.
 function handleDecrease(line) {
   if (line.quantity === 1) {
-    const confirmed = window.confirm(`¿Quitar "${line.product.name}" de la cesta?`)
-    if (!confirmed) return
+    lineToRemove.value = line
+    return
   }
   cartStore.decrementQuantity(line.product.id)
 }
 
 function handleRemove(line) {
-  const confirmed = window.confirm(`¿Quitar "${line.product.name}" de la cesta?`)
-  if (confirmed) {
-    cartStore.removeProduct(line.product.id)
-  }
+  lineToRemove.value = line
+}
+
+function handleRemoveCancel() {
+  lineToRemove.value = null
+}
+
+function handleRemoveConfirm() {
+  cartStore.removeProduct(lineToRemove.value.product.id)
+  lineToRemove.value = null
 }
 </script>
 
@@ -108,12 +124,35 @@ function handleRemove(line) {
           <dt>IVA</dt>
           <dd>{{ formatCurrency(cartStore.taxAmount) }}</dd>
         </div>
+        <div
+          v-if="checkoutStore.channel === 'domicilio'"
+          class="cart-summary__totals-row"
+        >
+          <dt>Gastos de envío</dt>
+          <dd>{{ formatCurrency(HOME_DELIVERY_FEE) }}</dd>
+        </div>
         <div class="cart-summary__totals-row cart-summary__totals-row--total">
           <dt>Total</dt>
-          <dd>{{ formatCurrency(cartStore.total) }}</dd>
+          <dd>{{
+            formatCurrency(
+              cartStore.total +
+                (checkoutStore.channel === 'domicilio' ? HOME_DELIVERY_FEE : 0),
+            )
+          }}</dd>
         </div>
-      </dl>
+            </dl>
     </template>
+
+    <ConfirmDialog
+      v-if="lineToRemove"
+      title="Quitar producto"
+      confirm-label="Quitar"
+      @confirm="handleRemoveConfirm"
+      @cancel="handleRemoveCancel"
+    >
+      <template v-if="lineToRemove.quantity === 1">Solo queda 1 unidad. </template>
+      ¿Quitar <strong>"{{ lineToRemove.product.name }}"</strong> de la cesta?
+    </ConfirmDialog>
   </section>
 </template>
 
@@ -135,8 +174,13 @@ function handleRemove(line) {
 .cart-summary__list {
   @apply flex flex-col gap-3;
 }
+/* Móvil: el producto ocupa la primera fila y los controles van debajo.
+   Desde sm: todo en una sola fila. */
 .cart-summary__line {
-  @apply grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 border-b border-outline-variant pb-3;
+  @apply grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-outline-variant pb-3 sm:grid-cols-[1fr_auto_auto_auto];
+}
+.cart-summary__line-info {
+  @apply col-span-3 sm:col-span-1;
 }
 .cart-summary__line-name {
   @apply font-medium text-on-surface;
@@ -151,10 +195,11 @@ function handleRemove(line) {
   @apply mt-0.5;
 }
 .cart-summary__quantity {
-  @apply flex items-center gap-2 rounded-full border border-outline-variant px-2 py-1;
+  @apply flex items-center justify-self-start gap-1 rounded-full border border-outline-variant px-1;
 }
+/* 44x44px: tamaño mínimo cómodo para el tacto */
 .cart-summary__quantity-btn {
-  @apply flex h-6 w-6 items-center justify-center rounded-full text-on-surface transition-colors hover:bg-primary-container;
+  @apply flex h-11 w-11 items-center justify-center rounded-full text-on-surface transition-colors hover:bg-primary-container;
 }
 .cart-summary__quantity-value {
   @apply w-4 text-center text-sm;
@@ -163,7 +208,7 @@ function handleRemove(line) {
   @apply font-heading font-semibold text-primary;
 }
 .cart-summary__remove-btn {
-  @apply text-on-surface-variant transition-colors hover:text-error;
+  @apply flex h-11 w-11 items-center justify-center text-on-surface-variant transition-colors hover:text-error;
 }
 .cart-summary__totals {
   @apply flex flex-col gap-1 pt-2;

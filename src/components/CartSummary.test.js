@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import CartSummary from './CartSummary.vue'
 import { useCartStore } from '../stores/cart'
 import { useExclusiveOffersStore } from '../stores/exclusiveOffers'
+import { useCheckoutStore } from '../stores/checkout'
+import { mount, flushPromises } from '@vue/test-utils'
 
 const routes = [
   { path: '/', name: 'carta', component: { template: '<div>Carta</div>' } },
@@ -76,7 +77,7 @@ describe('CartSummary', () => {
 
   it('shows the original price struck through, a discount badge, and reduced totals when the product has an active exclusive offer', async () => {
     const { wrapper, cartStore, offersStore } = await mountCartSummary()
-    offersStore.offers = [{ productId: productA.id, finalPrice: 8.5, discountRate: 15, expiresAt: null }]
+    offersStore.offers = [{ used: false, finalPrice: 8.5, discountRate: 15, product: { id: productA.id } }]
     cartStore.addProduct(productA)
     await wrapper.vm.$nextTick()
 
@@ -101,8 +102,7 @@ describe('CartSummary', () => {
     expect(cartStore.items[0].quantity).toBe(2)
   })
 
-  it('decreases the quantity without asking for confirmation when above 1', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm')
+    it('decreases the quantity without asking for confirmation when above 1', async () => {
     const { wrapper, cartStore } = await mountCartSummary()
     cartStore.addProduct(productA)
     cartStore.incrementQuantity(productA.id)
@@ -110,41 +110,74 @@ describe('CartSummary', () => {
 
     await wrapper.find('[aria-label="Reducir cantidad"]').trigger('click')
 
-    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(wrapper.find('.confirm-dialog').exists()).toBe(false)
     expect(cartStore.items[0].quantity).toBe(1)
   })
 
-  it('asks for confirmation before removing a line when quantity is 1, and removes it if confirmed', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+  it('opens the app confirm dialog when decreasing a line with quantity 1', async () => {
     const { wrapper, cartStore } = await mountCartSummary()
     cartStore.addProduct(productA)
     await wrapper.vm.$nextTick()
 
     await wrapper.find('[aria-label="Reducir cantidad"]').trigger('click')
 
-    expect(window.confirm).toHaveBeenCalled()
-    expect(cartStore.items).toEqual([])
-  })
-
-  it('keeps the line when the user cancels the confirmation', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
-    const { wrapper, cartStore } = await mountCartSummary()
-    cartStore.addProduct(productA)
-    await wrapper.vm.$nextTick()
-
-    await wrapper.find('[aria-label="Reducir cantidad"]').trigger('click')
-
+    const dialog = wrapper.find('.confirm-dialog')
+    expect(dialog.exists()).toBe(true)
+    expect(dialog.text()).toContain('Solo queda 1 unidad.')
+    expect(dialog.find('strong').text()).toBe('"Salmon Roll"')
     expect(cartStore.items).toHaveLength(1)
   })
 
-  it('removes the line when clicking the remove button and confirming', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+  it('removes the line when confirming the dialog', async () => {
     const { wrapper, cartStore } = await mountCartSummary()
     cartStore.addProduct(productA)
+    await wrapper.vm.$nextTick()
+
+    await wrapper.find('[aria-label="Reducir cantidad"]').trigger('click')
+    await wrapper.find('.confirm-dialog__button--danger').trigger('click')
+
+    expect(cartStore.items).toEqual([])
+    expect(wrapper.find('.confirm-dialog').exists()).toBe(false)
+  })
+
+  it('keeps the line when the user cancels the dialog', async () => {
+    const { wrapper, cartStore } = await mountCartSummary()
+    cartStore.addProduct(productA)
+    await wrapper.vm.$nextTick()
+
+    await wrapper.find('[aria-label="Reducir cantidad"]').trigger('click')
+    await wrapper.findAll('.confirm-dialog__button')[0].trigger('click')
+
+    expect(cartStore.items).toHaveLength(1)
+    expect(wrapper.find('.confirm-dialog').exists()).toBe(false)
+  })
+
+  it('asks for confirmation with the remove button even when there are several units', async () => {
+    const { wrapper, cartStore } = await mountCartSummary()
+    cartStore.addProduct(productA)
+    cartStore.incrementQuantity(productA.id)
     await wrapper.vm.$nextTick()
 
     await wrapper.find('[aria-label="Eliminar Salmon Roll de la cesta"]').trigger('click')
 
+    const dialog = wrapper.find('.confirm-dialog')
+    expect(dialog.exists()).toBe(true)
+    expect(dialog.text()).not.toContain('Solo queda 1 unidad.')
+
+    await wrapper.find('.confirm-dialog__button--danger').trigger('click')
+
     expect(cartStore.items).toEqual([])
+  })
+  it('shows the delivery fee and an updated total when the channel is domicilio', async () => {
+    const { wrapper, cartStore } = await mountCartSummary()
+    const checkoutStore = useCheckoutStore()
+    cartStore.addProduct(productA)
+    checkoutStore.setChannel('domicilio')
+    await flushPromises()
+
+    // 10 € subtotal + 1 € IVA (10%) + 2,50 € de envío = 13,50 €
+    const totalsText = wrapper.find('.cart-summary__totals').text()
+    expect(totalsText).toContain('Gastos de envío')
+    expect(totalsText).toContain('13,50')
   })
 })

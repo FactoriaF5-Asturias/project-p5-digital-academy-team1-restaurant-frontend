@@ -7,7 +7,6 @@ function buildForm(overrides = {}) {
     description: 'Nigiri de salmón',
     imageUrl: 'merge-nigiri.png',
     price: '6.50',
-    stock: '20',
     ...overrides,
   }
 }
@@ -21,11 +20,10 @@ describe('validateProductForm', () => {
     expect(validateProductForm(buildForm({ name: '' }))).toBe(PRODUCT_FORM_ERRORS.REQUIRED_FIELDS)
     expect(validateProductForm(buildForm({ description: '   ' }))).toBe(PRODUCT_FORM_ERRORS.REQUIRED_FIELDS)
     expect(validateProductForm(buildForm({ price: '' }))).toBe(PRODUCT_FORM_ERRORS.REQUIRED_FIELDS)
-    expect(validateProductForm(buildForm({ stock: '' }))).toBe(PRODUCT_FORM_ERRORS.REQUIRED_FIELDS)
   })
 
   it('treats null or undefined fields as empty', () => {
-    expect(validateProductForm(buildForm({ stock: undefined }))).toBe(PRODUCT_FORM_ERRORS.REQUIRED_FIELDS)
+    expect(validateProductForm(buildForm({ price: undefined }))).toBe(PRODUCT_FORM_ERRORS.REQUIRED_FIELDS)
     expect(validateProductForm(buildForm({ name: null }))).toBe(PRODUCT_FORM_ERRORS.REQUIRED_FIELDS)
   })
 
@@ -44,13 +42,9 @@ describe('validateProductForm', () => {
     expect(validateProductForm(buildForm({ price: 'abc' }))).toBe(PRODUCT_FORM_ERRORS.INVALID_PRICE)
   })
 
-  it('returns the stock error when the stock is negative or not a number', () => {
-    expect(validateProductForm(buildForm({ stock: '-1' }))).toBe(PRODUCT_FORM_ERRORS.INVALID_STOCK)
-    expect(validateProductForm(buildForm({ stock: 'abc' }))).toBe(PRODUCT_FORM_ERRORS.INVALID_STOCK)
-  })
-
-  it('accepts a stock of zero, also as a number', () => {
-    expect(validateProductForm(buildForm({ stock: 0 }))).toBe('')
+  it('does not ask for stock', () => {
+    expect(validateProductForm(buildForm({ stock: undefined }))).toBe('')
+    expect(PRODUCT_FORM_ERRORS).not.toHaveProperty('INVALID_STOCK')
   })
 })
 

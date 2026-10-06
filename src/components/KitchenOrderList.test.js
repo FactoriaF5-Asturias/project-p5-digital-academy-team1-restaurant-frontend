@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import KitchenOrderList from './KitchenOrderList.vue'
+import KitchenOrderCard from './KitchenOrderCard.vue'
 
 describe('KitchenOrderList', () => {
   it('shows the loading state', () => {
@@ -129,5 +130,17 @@ it('keeps the selected filter visually active', async () => {
 
   expect(buttons[2].classes()).toContain('btn-primary')
   expect(buttons[0].classes()).toContain('btn-secondary')
+})
+
+it('passes on the status change of an order to the view', async () => {
+  const wrapper = mount(KitchenOrderList, {
+    props: {
+      orders
+    }
+  })
+
+  await wrapper.findComponent(KitchenOrderCard).vm.$emit('status-changed', { id: 1042, status: 'READY' })
+
+  expect(wrapper.emitted('status-changed')).toEqual([[{ id: 1042, status: 'READY' }]])
 })
 })

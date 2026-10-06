@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import KitchenOrderCard from './KitchenOrderCard.vue'
+import LoadingSpinner from './LoadingSpinner.vue'
 
 const props = defineProps({
   orders: {
@@ -16,6 +17,10 @@ const props = defineProps({
     default: null
   }
 })
+
+
+// Reenvía a la vista el cambio de estado de una comanda.
+const emit = defineEmits(['status-changed'])
 
 const selectedChannel = ref('ALL')
 
@@ -73,12 +78,11 @@ const filteredOrders = computed(() => {
 </button>
 </div>
 
-    <p
+    <LoadingSpinner
       v-if="isLoading"
-      class="card p-6 text-on-surface-variant"
-    >
-      Cargando comandas...
-    </p>
+      class="card"
+      label="Cargando comandas..."
+    />
 
     <p
       v-else-if="error"
@@ -94,14 +98,16 @@ const filteredOrders = computed(() => {
       No hay comandas activas.
     </p>
 
+    <!-- Móvil: 1 columna · Tablet (md): 2 columnas · Escritorio (xl): 4 columnas -->
     <div
       v-else
-      class="grid gap-4"
+      class="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
     >
   <KitchenOrderCard
   v-for="order in filteredOrders"
   :key="order.id"
   :order="order"
+  @status-changed="emit('status-changed', $event)"
 />
     </div>
   </section>

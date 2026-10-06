@@ -1,6 +1,14 @@
 <script setup>
+import { computed } from "vue";
 import ExclusiveOffersCard from "../components/ExclusiveOffersCard.vue";
 import ProfileForm from "../components/profile/ProfileForm.vue";
+import { useAuthStore } from "../stores/auth";
+import { ROLES } from "../constants/roles";
+
+const authStore = useAuthStore();
+
+// Las ofertas exclusivas son solo para clientes: admin, cocina y reparto no hacen pedidos.
+const canSeeOffers = computed(() => authStore.role === ROLES.CUSTOMER);
 </script>
 
 <template>
@@ -9,7 +17,7 @@ import ProfileForm from "../components/profile/ProfileForm.vue";
 
     <ProfileForm />
 
-    <ExclusiveOffersCard />
+    <ExclusiveOffersCard v-if="canSeeOffers" />
   </main>
 </template>
 

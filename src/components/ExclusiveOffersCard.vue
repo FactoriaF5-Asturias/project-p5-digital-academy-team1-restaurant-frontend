@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useExclusiveOffersStore } from '../stores/exclusiveOffers'
+import LoadingSpinner from './LoadingSpinner.vue'
 
 const offersStore = useExclusiveOffersStore()
 const copiedOfferId = ref(null)
@@ -8,14 +9,6 @@ const copiedOfferId = ref(null)
 onMounted(() => {
   offersStore.fetchOffers()
 })
-
-function formatDate(isoDate) {
-  return new Date(isoDate).toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-}
 
 async function handleCopyCoupon(offer) {
   try {
@@ -36,7 +29,7 @@ async function handleCopyCoupon(offer) {
   <section class="exclusive-offers" aria-label="Ofertas exclusivas desbloqueadas">
     <h2 class="exclusive-offers__title">Ofertas Exclusivas Desbloqueadas</h2>
 
-    <p v-if="offersStore.isLoading" class="exclusive-offers__status">Cargando tus ofertas...</p>
+    <LoadingSpinner v-if="offersStore.isLoading" label="Cargando tus ofertas..." />
     <p v-else-if="offersStore.error" class="exclusive-offers__status exclusive-offers__status--error">
       {{ offersStore.error }}
     </p>
@@ -49,11 +42,8 @@ async function handleCopyCoupon(offer) {
       <ul v-else class="exclusive-offers__list">
         <li v-for="offer in offersStore.activeOffers" :key="offer.id" class="exclusive-offers__card">
           <div class="exclusive-offers__info">
-            <p class="exclusive-offers__product">{{ offer.productName }}</p>
+            <p class="exclusive-offers__product">{{ offer.product.name }}</p>
             <p class="exclusive-offers__discount">{{ offer.discountRate }}% de descuento</p>
-            <p v-if="offer.expiresAt" class="exclusive-offers__expiry">
-              Válida hasta el {{ formatDate(offer.expiresAt) }}
-            </p>
           </div>
 
           <button
@@ -103,10 +93,6 @@ async function handleCopyCoupon(offer) {
 
 .exclusive-offers__discount {
   @apply text-sm font-semibold text-primary;
-}
-
-.exclusive-offers__expiry {
-  @apply text-sm text-on-surface-variant;
 }
 
 .exclusive-offers__copy-btn {

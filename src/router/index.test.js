@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import router from './index'
 
+// Este test importa todas las vistas de la app, una por una:
+// con la cobertura activada puede tardar más que el límite por defecto (5 s).
+const LOAD_ALL_VIEWS_TIMEOUT_MS = 20000
+
 describe('router', () => {
   it('registra una ruta para cada sección principal', () => {
     const paths = router.getRoutes().map((route) => route.path)
@@ -8,7 +12,8 @@ describe('router', () => {
     expect(paths).toContain('/cesta')
     expect(paths).toContain('/admin')
   })
-    it('cada ruta indica qué roles pueden acceder (meta.roles)', () => {
+
+  it('cada ruta indica qué roles pueden acceder (meta.roles)', () => {
     const routes = router.getRoutes()
 
     routes.forEach((route) => {
@@ -24,5 +29,5 @@ describe('router', () => {
 
       expect(loadedModule.default).toBeDefined()
     }
-  })
+  }, LOAD_ALL_VIEWS_TIMEOUT_MS)
 })

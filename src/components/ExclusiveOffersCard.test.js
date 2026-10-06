@@ -9,9 +9,30 @@ import {
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ExclusiveOffersCard from './ExclusiveOffersCard.vue'
-import * as exclusiveOffersService from '../services/exclusiveOffers.service'
+import { getExclusiveOffers } from '../services/offers.service'
+
+vi.mock('../services/offers.service', () => ({
+  getExclusiveOffers: vi.fn(),
+  consumeOffer: vi.fn(),
+}))
 
 let wrappers = []
+
+function buildOffer(overrides = {}) {
+  return {
+    id: 1,
+    product: {
+      id: 1,
+      name: 'Hello Edamame',
+    },
+    originalPrice: 6.5,
+    finalPrice: 5.53,
+    discountRate: 15,
+    coupon: null,
+    used: false,
+    ...overrides,
+  }
+}
 
 function mountCard() {
   const pinia = createPinia()
@@ -28,37 +49,17 @@ function mountCard() {
   return wrapper
 }
 
-function buildOffer(overrides = {}) {
-  return {
-    id: 'offer-1',
-    productId: 1,
-    productName: 'Hello Edamame',
-    originalPrice: 6.5,
-    finalPrice: 5.53,
-    discountRate: 15,
-    expiresAt: null,
-    coupon: null,
-    used: false,
-    ...overrides,
-  }
-}
-
 describe('ExclusiveOffersCard', () => {
   beforeEach(() => {
-    vi.restoreAllMocks()
+    vi.resetAllMocks()
+
+    getExclusiveOffers.mockResolvedValue([])
 
     Object.defineProperty(navigator, 'clipboard', {
       value: {
         writeText: vi.fn().mockResolvedValue(undefined),
       },
       configurable: true,
-    })
-
-    vi.spyOn(
-      exclusiveOffersService,
-      'getExclusiveOffers',
-    ).mockResolvedValue({
-      offers: [],
     })
   })
 
@@ -70,10 +71,10 @@ describe('ExclusiveOffersCard', () => {
     vi.restoreAllMocks()
   })
 
-  it('shows a loading message while fetching offers', async () => {
+  it('shows loading while fetching offers', async () => {
     let resolveFetch
 
-    exclusiveOffersService.getExclusiveOffers.mockReturnValue(
+    getExclusiveOffers.mockReturnValue(
       new Promise((resolve) => {
         resolveFetch = resolve
       }),
@@ -85,15 +86,15 @@ describe('ExclusiveOffersCard', () => {
 
     expect(wrapper.text()).toContain('Cargando tus ofertas...')
 
-    resolveFetch({ offers: [] })
+    resolveFetch([])
 
     await flushPromises()
 
     expect(wrapper.text()).not.toContain('Cargando tus ofertas...')
   })
 
-  it('shows an error message when offers fail to load', async () => {
-    exclusiveOffersService.getExclusiveOffers.mockRejectedValue(
+  it('shows an error when fetching fails', async () => {
+    getExclusiveOffers.mockRejectedValue(
       new Error('Network error'),
     )
 
@@ -116,20 +117,10 @@ describe('ExclusiveOffersCard', () => {
     )
   })
 
-  it('renders active offers and excludes expired offers', async () => {
-    exclusiveOffersService.getExclusiveOffers.mockResolvedValue({
-      offers: [
-        buildOffer(),
-        buildOffer({
-          id: 'offer-2',
-          productId: 2,
-          productName: 'Kaisen Init',
-          discountRate: 20,
-          expiresAt: '2000-01-01T00:00:00',
-          coupon: 'OLD20',
-        }),
-      ],
-    })
+  it('renders the product and discount of an active offer', async () => {
+    getExclusiveOffers.mockResolvedValue([
+      buildOffer(),
+    ])
 
     const wrapper = mountCard()
 
@@ -140,20 +131,20 @@ describe('ExclusiveOffersCard', () => {
     expect(cards).toHaveLength(1)
     expect(cards[0].text()).toContain('Hello Edamame')
     expect(cards[0].text()).toContain('15% de descuento')
-    expect(wrapper.text()).not.toContain('Kaisen Init')
   })
 
   it('does not render used offers', async () => {
-    exclusiveOffersService.getExclusiveOffers.mockResolvedValue({
-      offers: [
-        buildOffer(),
-        buildOffer({
-          id: 'used-offer',
-          productName: 'Used product',
-          used: true,
-        }),
-      ],
-    })
+    getExclusiveOffers.mockResolvedValue([
+      buildOffer(),
+      buildOffer({
+        id: 2,
+        product: {
+          id: 2,
+          name: 'Used product',
+        },
+        used: true,
+      }),
+    ])
 
     const wrapper = mountCard()
 
@@ -164,13 +155,9 @@ describe('ExclusiveOffersCard', () => {
   })
 
   it('shows the empty state when every offer has been used', async () => {
-    exclusiveOffersService.getExclusiveOffers.mockResolvedValue({
-      offers: [
-        buildOffer({
-          used: true,
-        }),
-      ],
-    })
+    getExclusiveOffers.mockResolvedValue([
+      buildOffer({ used: true }),
+    ])
 
     const wrapper = mountCard()
 
@@ -182,49 +169,18 @@ describe('ExclusiveOffersCard', () => {
     )
   })
 
-  it('shows the expiry date when an active offer has one', async () => {
-    exclusiveOffersService.getExclusiveOffers.mockResolvedValue({
-      offers: [
-        buildOffer({
-          expiresAt: '2099-12-31T12:00:00',
-        }),
-      ],
-    })
+  it('does not show a copy button without a coupon', async () => {
+    getExclusiveOffers.mockResolvedValue([
+      buildOffer(),
+    ])
 
     const wrapper = mountCard()
 
     await flushPromises()
 
-    expect(wrapper.get('.exclusive-offers__expiry').text()).toContain(
-      'Válida hasta el',
-    )
-    expect(wrapper.get('.exclusive-offers__expiry').text()).toContain(
-      '2099',
-    )
-  })
-
-  it('does not show an expiry date when the offer has none', async () => {
-    exclusiveOffersService.getExclusiveOffers.mockResolvedValue({
-      offers: [buildOffer()],
-    })
-
-    const wrapper = mountCard()
-
-    await flushPromises()
-
-    expect(wrapper.find('.exclusive-offers__expiry').exists()).toBe(false)
-  })
-
-  it('does not show a copy button when the offer has no coupon', async () => {
-    exclusiveOffersService.getExclusiveOffers.mockResolvedValue({
-      offers: [buildOffer()],
-    })
-
-    const wrapper = mountCard()
-
-    await flushPromises()
-
-    expect(wrapper.find('.exclusive-offers__copy-btn').exists()).toBe(false)
+    expect(
+      wrapper.find('.exclusive-offers__copy-btn').exists(),
+    ).toBe(false)
   })
 
   it('copies the coupon and shows a confirmation', async () => {
@@ -232,35 +188,28 @@ describe('ExclusiveOffersCard', () => {
       toFake: ['setTimeout', 'clearTimeout'],
     })
 
-    exclusiveOffersService.getExclusiveOffers.mockResolvedValue({
-      offers: [
-        buildOffer({
-          id: 'offer-2',
-          productId: 3,
-          productName: 'Kaisen Init',
-          discountRate: 20,
-          coupon: 'KAISEN20',
-        }),
-      ],
-    })
+    getExclusiveOffers.mockResolvedValue([
+      buildOffer({ coupon: 'coupon-a' }),
+    ])
 
     const wrapper = mountCard()
 
     await flushPromises()
 
-    const copyButton = wrapper.get('.exclusive-offers__copy-btn')
+    expect(
+      wrapper.get('.exclusive-offers__copy-btn').text(),
+    ).toBe('Copiar coupon-a')
 
-    expect(copyButton.text()).toBe('Copiar KAISEN20')
-
-    await copyButton.trigger('click')
+    await wrapper.get('.exclusive-offers__copy-btn').trigger('click')
     await flushPromises()
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      'KAISEN20',
+      'coupon-a',
     )
-    expect(wrapper.get('.exclusive-offers__copy-btn').text()).toBe(
-      '¡Copiado!',
-    )
+
+    expect(
+      wrapper.get('.exclusive-offers__copy-btn').text(),
+    ).toBe('¡Copiado!')
 
     vi.advanceTimersByTime(2000)
     await wrapper.vm.$nextTick()
@@ -271,13 +220,9 @@ describe('ExclusiveOffersCard', () => {
       toFake: ['setTimeout', 'clearTimeout'],
     })
 
-    exclusiveOffersService.getExclusiveOffers.mockResolvedValue({
-      offers: [
-        buildOffer({
-          coupon: 'KAISEN20',
-        }),
-      ],
-    })
+    getExclusiveOffers.mockResolvedValue([
+      buildOffer({ coupon: 'coupon-a' }),
+    ])
 
     const wrapper = mountCard()
 
@@ -286,15 +231,15 @@ describe('ExclusiveOffersCard', () => {
     await wrapper.get('.exclusive-offers__copy-btn').trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('.exclusive-offers__copy-btn').text()).toBe(
-      '¡Copiado!',
-    )
+    expect(
+      wrapper.get('.exclusive-offers__copy-btn').text(),
+    ).toBe('¡Copiado!')
 
     vi.advanceTimersByTime(2000)
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.get('.exclusive-offers__copy-btn').text()).toBe(
-      'Copiar KAISEN20',
-    )
+    expect(
+      wrapper.get('.exclusive-offers__copy-btn').text(),
+    ).toBe('Copiar coupon-a')
   })
 })

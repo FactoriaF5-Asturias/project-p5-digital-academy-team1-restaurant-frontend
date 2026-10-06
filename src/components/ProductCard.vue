@@ -1,12 +1,19 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
+import ProductImage from './ProductImage.vue'
 
 // Recibe un producto y emite add-to-cart con la cantidad elegida.
-// No conoce el store de la cesta (eso llega en GSF-06): queda desacoplado.
+// No conoce el store de la cesta (eso llega en otra parte): queda desacoplado.
+// Con readonly solo muestra el plato (foto, nombre, descripción y precio),
+// sin cantidad ni botón "Añadir": lo decide quien la usa, según el rol.
 const props = defineProps({
   product: {
     type: Object,
     required: true,
+  },
+  readonly: {
+    type: Boolean,
+    default: false,
   },
 })
 
@@ -26,6 +33,15 @@ const formattedPrice = computed(() =>
     currency: 'EUR',
   })
 )
+
+// El backend solo guarda el nombre del archivo (p. ej. "hello-edamame.png"),
+// servido desde public/products/. Si en cambio llega una URL completa
+// (como las usadas en tests, o un futuro storage externo), se usa tal cual.
+const imageSrc = computed(() => {
+  const url = props.product.imageUrl
+  if (!url) return ''
+  return url.startsWith('http') ? url : `/products/${url}`
+})
 
 function increaseQuantity() {
   quantity.value += 1
@@ -57,11 +73,10 @@ onUnmounted(() => {
 
 <template>
   <article class="product-card">
-    <img
+    <ProductImage
       class="product-card__image"
-      :src="product.imageUrl"
+      :src="imageSrc"
       :alt="`Foto de ${product.name}`"
-      loading="lazy"
     />
 
     <div class="product-card__body">
@@ -69,7 +84,7 @@ onUnmounted(() => {
       <p class="product-card__description">{{ product.description }}</p>
       <p class="product-card__price">{{ formattedPrice }}</p>
 
-      <div class="product-card__footer">
+      <div v-if="!readonly" class="product-card__footer">
         <div
           class="product-card__quantity"
           role="group"
@@ -137,16 +152,17 @@ onUnmounted(() => {
   @apply mt-2 flex items-center justify-between gap-2;
 }
 .product-card__quantity {
-  @apply flex items-center gap-2 rounded-full border border-outline-variant px-2 py-1;
+  @apply flex items-center gap-1 rounded-full border border-outline-variant px-1;
 }
+/* 44x44px: tamaño mínimo cómodo para el tacto */
 .product-card__quantity-btn {
-  @apply flex h-6 w-6 items-center justify-center rounded-full text-on-surface transition-colors hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-40;
+  @apply flex h-11 w-11 items-center justify-center rounded-full text-on-surface transition-colors hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-40;
 }
 .product-card__quantity-value {
   @apply w-4 text-center text-sm;
 }
 .product-card__add-btn {
-  @apply rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-on-primary transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-80;
+  @apply min-h-11 rounded-full bg-primary px-5 text-sm font-medium text-on-primary transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-80;
 }
 .product-card__add-btn--added {
   @apply bg-primary;

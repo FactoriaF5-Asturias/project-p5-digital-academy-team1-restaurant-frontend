@@ -159,6 +159,8 @@
 html {
   background: var(--background);
   scrollbar-gutter: stable;
+  /* Hueco del header fijo (h-16) al desplazar un elemento a la vista */
+  scroll-padding-top: 5rem;
 }
 
 body {
@@ -175,6 +177,13 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+/* Al enfocar un campo en móvil, deja sitio debajo para ver los botones de acción */
+input,
+textarea,
+select {
+  scroll-margin-bottom: 6rem;
 }
 
 /* =========================================================

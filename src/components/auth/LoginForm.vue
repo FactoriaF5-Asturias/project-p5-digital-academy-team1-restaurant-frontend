@@ -1,14 +1,19 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import PasswordInput from '../PasswordInput.vue'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
+
+// Viene de RegisterForm tras crear la cuenta (/login?registered=1).
+const isJustRegistered = computed(() => route?.query?.registered === '1')
 
 const handleSubmit = async () => {
   errorMessage.value = ''
@@ -19,7 +24,8 @@ const handleSubmit = async () => {
       password: password.value,
     })
 
-    await router.push('/perfil')
+    // La carta es la única vista que tienen todos los roles.
+    await router.push({ name: 'carta' })
   } catch (error) {
     errorMessage.value =
       error.response?.data?.message ||
@@ -61,14 +67,10 @@ const handleSubmit = async () => {
         Contraseña
       </label>
 
-      <input
+      <PasswordInput
         id="password"
         v-model="password"
-        type="password"
         autocomplete="current-password"
-        required
-        class="w-full rounded-lg border border-outline bg-surface-container px-4 py-3 outline-none transition focus:border-primary"
-        placeholder="••••••••"
       />
     </div>
         <div class="text-right">
@@ -79,6 +81,13 @@ const handleSubmit = async () => {
         ¿Olvidaste tu contraseña?
       </RouterLink>
     </div>
+<p
+  v-if="isJustRegistered && !errorMessage"
+  role="status"
+  class="text-sm text-secondary"
+>
+  Cuenta creada. Ya puedes iniciar sesión.
+</p>
 <p
   v-if="errorMessage"
   role="alert"

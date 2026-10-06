@@ -14,12 +14,7 @@ defineProps({
 
 const emit = defineEmits(['toggle-availability', 'edit', 'delete'])
 
-const LOW_STOCK_THRESHOLD = 5
-const EMPTY_VALUE = '—'
-
-function isLowStock(product) {
-  return product.stock <= LOW_STOCK_THRESHOLD
-}
+const TABLE_COLUMNS_COUNT = 5
 </script>
 
 <template>
@@ -29,7 +24,6 @@ function isLowStock(product) {
         <th class="products-table__cell">Producto</th>
         <th class="products-table__cell">Categoría</th>
         <th class="products-table__cell">Precio</th>
-        <th class="products-table__cell">Stock</th>
         <th class="products-table__cell">Estado</th>
         <th class="products-table__cell products-table__cell--right">Acciones</th>
       </tr>
@@ -37,7 +31,7 @@ function isLowStock(product) {
 
     <tbody>
       <tr v-if="products.length === 0">
-        <td colspan="6" class="products-table__empty">No hay productos en esta categoría.</td>
+        <td :colspan="TABLE_COLUMNS_COUNT" class="products-table__empty">No hay productos en esta categoría.</td>
       </tr>
 
       <tr v-for="product in products" :key="product.id" class="products-table__row">
@@ -52,15 +46,6 @@ function isLowStock(product) {
 
         <td class="products-table__cell products-table__price">
           {{ formatCurrency(product.price) }}
-        </td>
-
-        <td class="products-table__cell">
-          <span
-            :class="['products-table__badge', { 'products-table__badge--low-stock': isLowStock(product) }]"
-          >
-            <span v-if="isLowStock(product)" aria-hidden="true">⚠️</span>
-            {{ product.stock ?? EMPTY_VALUE }} uds.
-          </span>
         </td>
 
         <td class="products-table__cell">
@@ -152,10 +137,6 @@ function isLowStock(product) {
 
 .products-table__badge {
   @apply inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold bg-surface-variant text-on-surface-variant;
-}
-
-.products-table__badge--low-stock {
-  @apply bg-error-container text-error;
 }
 
 .products-table__badge--active {

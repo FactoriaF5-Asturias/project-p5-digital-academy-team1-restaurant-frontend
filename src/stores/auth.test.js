@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAuthStore } from './auth'
+import { useCartStore } from './cart'
+import { useLastOrderStore } from './lastOrder'
 import { authService } from '../services/authService'
 
 vi.mock('../services/authService', () => ({
@@ -12,7 +14,8 @@ vi.mock('../services/authService', () => ({
 }))
 
 describe('auth store', () => {
-  beforeEach(() => {
+   beforeEach(() => {
+    localStorage.clear()
     setActivePinia(createPinia())
     vi.clearAllMocks()
   })
@@ -120,5 +123,43 @@ describe('auth store', () => {
     expect(authStore.user).toBeNull()
     expect(authStore.role).toBeNull()
     expect(authStore.isAuthenticated).toBe(false)
+  })
+  
+  it('login vacía la cesta y el último pedido del invitado: es otra persona', async () => {
+    authService.login.mockResolvedValue({ email: 'user@test.com', roles: ['ROLE_CUSTOMER'] })
+    const cartStore = useCartStore()
+    const lastOrderStore = useLastOrderStore()
+    cartStore.addProduct({ id: 1, name: 'Salmon Roll', price: 10 })
+    lastOrderStore.setOrder({ id: 42, ticketAccessToken: 'abc-123' })
+
+    await useAuthStore().login({ email: 'user@test.com', password: '123456' })
+
+    expect(cartStore.isEmpty).toBe(true)
+    expect(lastOrderStore.ticketReference).toBeNull()
+  })
+
+  it('login fallido no toca la cesta del invitado', async () => {
+    authService.login.mockRejectedValue(new Error('Unauthorized'))
+    const cartStore = useCartStore()
+    cartStore.addProduct({ id: 1, name: 'Salmon Roll', price: 10 })
+
+    await expect(
+      useAuthStore().login({ email: 'user@test.com', password: 'mal' }),
+    ).rejects.toThrow()
+
+    expect(cartStore.isEmpty).toBe(false)
+  })
+
+  it('logout vacía la cesta y el último pedido para el siguiente usuario', async () => {
+    authService.logout.mockResolvedValue()
+    const cartStore = useCartStore()
+    const lastOrderStore = useLastOrderStore()
+    cartStore.addProduct({ id: 1, name: 'Salmon Roll', price: 10 })
+    lastOrderStore.setOrder({ id: 42, ticketAccessToken: 'abc-123' })
+
+    await useAuthStore().logout()
+
+    expect(cartStore.isEmpty).toBe(true)
+    expect(lastOrderStore.ticketReference).toBeNull()
   })
 })

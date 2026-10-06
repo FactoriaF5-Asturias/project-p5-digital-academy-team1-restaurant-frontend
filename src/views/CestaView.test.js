@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
@@ -9,6 +9,13 @@ import PaymentSelector from '../components/PaymentSelector.vue'
 import ChefNoteField from '../components/ChefNoteField.vue'
 import OrderConfirmation from '../components/OrderConfirmation.vue'
 import { useCartStore } from '../stores/cart'
+
+// ChannelSelector intenta detectar la mesa al montarse. Sin este mock el test
+// hace una petición HTTP real que falla y escribe en consola cuando el test ya
+// ha terminado, lo que provoca un "Unhandled Rejection" en Vitest.
+vi.mock('../services/tables.service', () => ({
+  getLinkedTable: vi.fn().mockRejectedValue(new Error('No linked table in tests')),
+}))
 
 const routes = [
   { path: '/', name: 'carta', component: { template: '<div>Carta</div>' } },

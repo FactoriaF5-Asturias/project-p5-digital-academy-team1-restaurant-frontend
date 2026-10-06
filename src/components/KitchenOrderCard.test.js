@@ -47,7 +47,7 @@ describe('KitchenOrderCard', () => {
       props: { order },
     })
 
-    expect(wrapper.text()).toContain('Estado: PROCESSING')
+    expect(wrapper.text()).toContain('Estado: En preparación')
   })
 
   it('updates the order status to delayed through the API', async () => {
@@ -61,7 +61,7 @@ describe('KitchenOrderCard', () => {
     await flushPromises()
 
     expect(updateKitchenOrderStatus).toHaveBeenCalledWith(1042, 'DELAYED')
-    expect(wrapper.text()).toContain('Estado: DELAYED')
+    expect(wrapper.text()).toContain('Estado: Con retraso')
     expect(buttons[1].attributes('disabled')).toBeDefined()
   })
 
@@ -76,7 +76,7 @@ describe('KitchenOrderCard', () => {
     await flushPromises()
 
     expect(updateKitchenOrderStatus).toHaveBeenCalledWith(1042, 'READY')
-    expect(wrapper.text()).toContain('Estado: READY')
+    expect(wrapper.text()).toContain('Estado: Listo')
     expect(buttons[2].attributes('disabled')).toBeDefined()
   })
 
@@ -93,7 +93,7 @@ describe('KitchenOrderCard', () => {
     await flushPromises()
 
     expect(updateKitchenOrderStatus).toHaveBeenCalledWith(1042, 'READY')
-    expect(wrapper.text()).toContain('Estado: PROCESSING')
+    expect(wrapper.text()).toContain('Estado: En preparación')
     expect(wrapper.text()).toContain(
       'No se ha podido actualizar el estado.'
     )
@@ -138,10 +138,33 @@ describe('KitchenOrderCard', () => {
     await buttons[2].trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Estado: READY')
+    expect(wrapper.text()).toContain('Estado: Listo')
     expect(wrapper.text()).toContain('Nota de comanda prioritaria')
     expect(wrapper.text()).toContain(
       'ALERGIA AL MARISCO - Preparar por separado'
     )
+  })
+  
+  it('notifies the new status after updating it, so the metrics can refresh', async () => {
+    const wrapper = mount(KitchenOrderCard, {
+      props: { order },
+    })
+
+    await wrapper.findAll('button')[2].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.emitted('status-changed')).toEqual([[{ id: 1042, status: 'READY' }]])
+  })
+
+  it('does not notify a status change when the API fails', async () => {
+    updateKitchenOrderStatus.mockRejectedValue(new Error('network error'))
+    const wrapper = mount(KitchenOrderCard, {
+      props: { order },
+    })
+
+    await wrapper.findAll('button')[2].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.emitted('status-changed')).toBeUndefined()
   })
 })
