@@ -14,57 +14,94 @@ const {
 
 const emit = defineEmits(['order-accepted'])
 
-onMounted(fetchOrders)
+onMounted(() => {
+  fetchOrders()
+})
 
 async function handleAccept(order) {
-  await acceptOrder(order)
+  const accepted = await acceptOrder(order)
 
-  if (!acceptError.value) {
+  if (accepted) {
     emit('order-accepted')
   }
 }
 </script>
 
 <template>
-  <section class="pending-deliveries" aria-label="Pedidos listos para repartir">
-    <h2 class="pending-deliveries__title">Pedidos listos para repartir</h2>
+  <section
+    class="pending-deliveries"
+    aria-label="Pedidos listos para repartir"
+    :aria-busy="isLoading || acceptingOrderId !== null"
+  >
+    <h2 class="pending-deliveries__title">
+      Pedidos listos para repartir
+    </h2>
 
-    <p v-if="isLoading" role="status">Cargando pedidos pendientes de reparto…</p>
+    <p
+      v-if="acceptError"
+      role="alert"
+      class="pending-deliveries__error"
+    >
+      {{ acceptError }}
+    </p>
 
-    <p v-else-if="error" role="alert" class="pending-deliveries__error">
-      {{ error }}
+    <p v-if="isLoading" role="status">
+      Cargando pedidos pendientes de reparto…
     </p>
 
     <template v-else>
-      <p v-if="orders.length === 0" role="status">
+      <div v-if="error" class="pending-deliveries__feedback">
+        <p role="alert" class="pending-deliveries__error">
+          {{ error }}
+        </p>
+
+        <button
+          type="button"
+          class="pending-deliveries__accept-btn"
+          :disabled="acceptingOrderId !== null"
+          @click="fetchOrders()"
+        >
+          Reintentar
+        </button>
+      </div>
+
+      <p v-if="!error && orders.length === 0" role="status">
         No hay pedidos listos para repartir ahora mismo.
       </p>
 
-      <template v-else>
-        <p v-if="acceptError" role="alert" class="pending-deliveries__error">
-          {{ acceptError }}
-        </p>
+      <ul
+        v-if="orders.length > 0"
+        class="pending-deliveries__list"
+      >
+        <li
+          v-for="order in orders"
+          :key="order.id"
+          class="pending-deliveries__item"
+        >
+          <div class="pending-deliveries__info">
+            <p class="pending-deliveries__order-id">
+              Pedido #{{ order.id }}
+            </p>
 
-        <ul class="pending-deliveries__list">
-          <li v-for="order in orders" :key="order.id" class="pending-deliveries__item">
-            <div class="pending-deliveries__info">
-              <p class="pending-deliveries__order-id">Pedido #{{ order.id }}</p>
-              <p class="pending-deliveries__address">
-                {{ order.address ?? 'Sin dirección registrada' }}
-              </p>
-            </div>
+            <p class="pending-deliveries__address">
+              {{ order.address ?? 'Sin dirección registrada' }}
+            </p>
+          </div>
 
-            <button
-              type="button"
-              class="pending-deliveries__accept-btn"
-              :disabled="acceptingOrderId === order.id"
-              @click="handleAccept(order)"
-            >
-              {{ acceptingOrderId === order.id ? 'Aceptando…' : 'Aceptar y salir a repartir' }}
-            </button>
-          </li>
-        </ul>
-      </template>
+          <button
+            type="button"
+            class="pending-deliveries__accept-btn"
+            :disabled="acceptingOrderId !== null"
+            @click="handleAccept(order)"
+          >
+            {{
+              acceptingOrderId === order.id
+                ? 'Aceptando…'
+                : 'Aceptar y salir a repartir'
+            }}
+          </button>
+        </li>
+      </ul>
     </template>
   </section>
 </template>
@@ -73,11 +110,16 @@ async function handleAccept(order) {
 @reference "../style.css";
 
 .pending-deliveries {
-  @apply flex flex-col gap-4 rounded-xl border border-outline bg-surface-container p-5;
+  @apply flex flex-col gap-4 rounded-xl border border-outline
+    bg-surface-container p-5;
 }
 
 .pending-deliveries__title {
   @apply font-heading text-lg font-semibold text-on-surface;
+}
+
+.pending-deliveries__feedback {
+  @apply flex flex-col items-start gap-3;
 }
 
 .pending-deliveries__error {
@@ -89,7 +131,8 @@ async function handleAccept(order) {
 }
 
 .pending-deliveries__item {
-  @apply flex items-center justify-between gap-3 border-b border-outline-variant pb-3;
+  @apply flex flex-wrap items-center justify-between gap-3
+    border-b border-outline-variant pb-3;
 }
 
 .pending-deliveries__order-id {
