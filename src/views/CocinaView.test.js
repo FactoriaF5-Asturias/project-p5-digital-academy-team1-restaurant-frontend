@@ -1,102 +1,192 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import CocinaView from './CocinaView.vue'
-import KitchenMetrics from '../components/KitchenMetrics.vue'
 import KitchenOrderList from '../components/KitchenOrderList.vue'
-import { getKitchenOrders, getKitchenMetrics } from '../services/kitchen.service'
-
-// Responsabilidad: la vista de Cocina carga comandas y métricas al entrar
-// y pasa a cada panel sus datos, su estado de carga y su error.
+import {
+  getKitchenOrders,
+  getKitchenChannelCounts,
+  getKitchenMetrics,
+} from '../services/kitchen.service'
 
 vi.mock('../services/kitchen.service', () => ({
   getKitchenOrders: vi.fn(),
+  getKitchenChannelCounts: vi.fn(),
   getKitchenMetrics: vi.fn(),
 }))
-
-const ORDERS = [{ id: 7, status: 'PLACED', products: [] }]
-const METRICS = { activeOrders: 1, delayedOrders: 0 }
-const ORDERS_ERROR = 'No se han podido cargar las comandas.'
-const METRICS_ERROR = 'No se han podido cargar las métricas de cocina.'
 
 function mountView() {
   return mount(CocinaView, {
     global: {
-      stubs: { KitchenMetrics: true, KitchenOrderList: true },
+      stubs: {
+        KitchenMetrics: true,
+        KitchenOrderCard: {
+          props: ['order'],
+          template: '<article>Comanda #{{ order.id }}</article>',
+        },
+      },
     },
   })
 }
 
 describe('CocinaView', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.resetAllMocks()
+
+    getKitchenOrders.mockResolvedValue([])
+    getKitchenChannelCounts.mockResolvedValue({
+      total: 5,
+      inStore: 3,
+      delivery: 2,
+    })
+    getKitchenMetrics.mockResolvedValue({})
   })
 
-  it('muestra los paneles cargando mientras llegan los datos', () => {
-    getKitchenOrders.mockReturnValue(new Promise(() => {}))
-    getKitchenMetrics.mockReturnValue(new Promise(() => {}))
+  it('loads all orders, counters and metrics on mount', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(getKitchenOrders).toHaveBeenCalledWith('ALL')
+    expect(getKitchenChannelCounts).toHaveBeenCalledTimes(1)
+    expect(getKitchenMetrics).toHaveBeenCalledTimes(1)
+
+    expect(
+      wrapper.getComponent(KitchenOrderList).props('channelCounts'),
+    ).toEqual({ total: 5, inStore: 3, delivery: 2 })
+  })
+
+  it('shows loading while orders are being fetched', async () => {
+    let resolveRequest
+
+    getKitchenOrders.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRequest = resolve
+      }),
+    )
 
     const wrapper = mountView()
 
-    expect(wrapper.findComponent(KitchenOrderList).props('isLoading')).toBe(true)
-    expect(wrapper.findComponent(KitchenMetrics).props('isLoading')).toBe(true)
+    expect(wrapper.text()).toContain('Cargando comandas...')
+
+    resolveRequest([])
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('Cargando comandas...')
   })
 
-  it('carga las comandas y las métricas al entrar y se las pasa a cada panel', async () => {
-    getKitchenOrders.mockResolvedValue(ORDERS)
-    getKitchenMetrics.mockResolvedValue(METRICS)
+  it.each([
+    ['ONSITE', 1],
+    ['ONLINE', 2],
+  ])(
+    'requests channel %s and shows its orders',
+    async (channel, buttonIndex) => {
+      const wrapper = mountView()
+      await flushPromises()
+
+      getKitchenOrders.mockResolvedValueOnce([{ id: 42, channel }])
+
+      await wrapper
+        .getComponent(KitchenOrderList)
+        .findAll('button')[buttonIndex]
+        .trigger('click')
+
+      await flushPromises()
+
+      expect(getKitchenOrders).toHaveBeenLastCalledWith(channel)
+      expect(getKitchenChannelCounts).toHaveBeenCalledTimes(2)
+      expect(wrapper.text()).toContain('Comanda #42')
+      expect(
+        wrapper.getComponent(KitchenOrderList).props('selectedChannel'),
+      ).toBe(channel)
+    },
+  )
+
+  it('does not reload when clicking the selected channel', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper
+      .getComponent(KitchenOrderList)
+      .findAll('button')[0]
+      .trigger('click')
+
+    expect(getKitchenOrders).toHaveBeenCalledTimes(1)
+    expect(getKitchenChannelCounts).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows an empty state for the selected channel', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper
+      .getComponent(KitchenOrderList)
+      .findAll('button')[1]
+      .trigger('click')
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain(
+      'No hay comandas activas para este canal.',
+    )
+  })
+
+  it('shows an error when orders cannot be loaded', async () => {
+    getKitchenOrders.mockRejectedValueOnce(new Error('Network error'))
 
     const wrapper = mountView()
     await flushPromises()
 
-    const orderList = wrapper.findComponent(KitchenOrderList)
-    expect(orderList.props('orders')).toEqual(ORDERS)
-    expect(orderList.props('isLoading')).toBe(false)
-    expect(orderList.props('error')).toBeNull()
-
-    const metricsPanel = wrapper.findComponent(KitchenMetrics)
-    expect(metricsPanel.props('metrics')).toEqual(METRICS)
-    expect(metricsPanel.props('isLoading')).toBe(false)
-    expect(metricsPanel.props('error')).toBeNull()
+    expect(wrapper.text()).toContain(
+      'No se han podido cargar las comandas.',
+    )
+    expect(
+      wrapper.getComponent(KitchenOrderList).props('isLoading'),
+    ).toBe(false)
   })
 
-  it('si fallan las comandas muestra su error sin afectar a las métricas', async () => {
-    getKitchenOrders.mockRejectedValue(new Error('network error'))
-    getKitchenMetrics.mockResolvedValue(METRICS)
+  it('keeps orders visible when loading counters fails', async () => {
+    getKitchenOrders.mockResolvedValueOnce([{ id: 42 }])
+    getKitchenChannelCounts.mockRejectedValueOnce(
+      new Error('Network error'),
+    )
 
     const wrapper = mountView()
     await flushPromises()
 
-    expect(wrapper.findComponent(KitchenOrderList).props('error')).toBe(ORDERS_ERROR)
-    expect(wrapper.findComponent(KitchenOrderList).props('isLoading')).toBe(false)
-    expect(wrapper.findComponent(KitchenMetrics).props('metrics')).toEqual(METRICS)
+    expect(wrapper.text()).toContain('Comanda #42')
+    expect(wrapper.text()).toContain(
+      'No se han podido cargar los contadores.',
+    )
+    expect(
+      wrapper.getComponent(KitchenOrderList).props('channelCounts'),
+    ).toBeNull()
   })
 
-  it('si fallan las métricas muestra su error sin afectar a las comandas', async () => {
-    getKitchenOrders.mockResolvedValue(ORDERS)
-    getKitchenMetrics.mockRejectedValue(new Error('network error'))
+  it('ignores an older response after changing channel', async () => {
+    let resolveInitialRequest
+
+    getKitchenOrders.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveInitialRequest = resolve
+      }),
+    )
 
     const wrapper = mountView()
+
+    getKitchenOrders.mockResolvedValueOnce([
+      { id: 99, channel: 'ONLINE' },
+    ])
+
+    await wrapper
+      .getComponent(KitchenOrderList)
+      .findAll('button')[2]
+      .trigger('click')
+
     await flushPromises()
 
-    expect(wrapper.findComponent(KitchenMetrics).props('error')).toBe(METRICS_ERROR)
-    expect(wrapper.findComponent(KitchenMetrics).props('isLoading')).toBe(false)
-    expect(wrapper.findComponent(KitchenOrderList).props('orders')).toEqual(ORDERS)
-  })
-  
-  it('vuelve a cargar las métricas cuando cambia el estado de una comanda, sin ocultarlas', async () => {
-    getKitchenOrders.mockResolvedValue(ORDERS)
-    getKitchenMetrics.mockResolvedValue(METRICS)
-    const wrapper = mountView()
+    resolveInitialRequest([{ id: 1, channel: 'ONSITE' }])
     await flushPromises()
 
-    const UPDATED_METRICS = { activeOrders: 1, delayedOrders: 1 }
-    getKitchenMetrics.mockResolvedValue(UPDATED_METRICS)
-    wrapper.findComponent(KitchenOrderList).vm.$emit('status-changed', { id: 7, status: 'DELAYED' })
-    expect(wrapper.findComponent(KitchenMetrics).props('isLoading')).toBe(false)
-    await flushPromises()
-
-    expect(getKitchenMetrics).toHaveBeenCalledTimes(2)
-    expect(wrapper.findComponent(KitchenMetrics).props('metrics')).toEqual(UPDATED_METRICS)
+    expect(wrapper.text()).toContain('Comanda #99')
+    expect(wrapper.text()).not.toContain('Comanda #1')
   })
 })

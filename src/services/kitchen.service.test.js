@@ -2,35 +2,61 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import api from './api'
 import {
   getKitchenOrders,
+  getKitchenChannelCounts,
   getKitchenMetrics,
+  updateKitchenOrderStatus,
 } from './kitchen.service'
 
 vi.mock('./api', () => ({
   default: {
     get: vi.fn(),
+    patch: vi.fn(),
   },
 }))
 
-describe('kitchen service', () => {
+describe('kitchen.service', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
 
-  it('obtiene y adapta las comandas del backend', async () => {
+  it('requests all channels without a channel parameter', async () => {
+    api.get.mockResolvedValue({ data: [] })
+
+    await getKitchenOrders()
+
+    expect(api.get).toHaveBeenCalledWith(
+      '/api/v1/kitchen/orders',
+      { params: {} },
+    )
+  })
+
+  it.each(['ONSITE', 'ONLINE'])(
+    'requests orders for channel %s',
+    async (channel) => {
+      api.get.mockResolvedValue({ data: [] })
+
+      await getKitchenOrders(channel)
+
+      expect(api.get).toHaveBeenCalledWith(
+        '/api/v1/kitchen/orders',
+        { params: { channel } },
+      )
+    },
+  )
+
+  it('maps backend orders and preserves their channel', async () => {
     api.get.mockResolvedValue({
       data: [
         {
-          id: 1,
+          id: 42,
           status: 'PROCESSING',
-          chefNote: 'Sin gluten',
+          channel: 'ONSITE',
+          chefNote: 'Sin sésamo',
           isDelayed: false,
-          createdAt: '2026-09-28T12:00:00',
+          createdAt: '2026-10-06T01:00:00',
           paymentStatus: 'PAID',
           items: [
-            {
-              productName: 'Pull Nigiri',
-              quantity: 2,
-            },
+            { productName: 'Merge Maki', quantity: 2 },
           ],
         },
       ],
@@ -38,42 +64,84 @@ describe('kitchen service', () => {
 
     const orders = await getKitchenOrders()
 
-    expect(api.get).toHaveBeenCalledWith('/api/v1/kitchen/orders')
-
     expect(orders).toEqual([
       {
-        id: 1,
+        id: 42,
         status: 'PROCESSING',
-        priorityNote: 'Sin gluten',
+        channel: 'ONSITE',
+        priorityNote: 'Sin sésamo',
         isDelayed: false,
-        createdAt: '2026-09-28T12:00:00',
+        createdAt: '2026-10-06T01:00:00',
         paymentStatus: 'PAID',
         products: [
-          {
-            name: 'Pull Nigiri',
-            quantity: 2,
-          },
+          { name: 'Merge Maki', quantity: 2 },
         ],
       },
     ])
   })
 
-  it('obtiene las métricas de cocina', async () => {
-    const metrics = {
-      totalActiveOrders: 5,
-      averagePreparationMinutes: 12,
-      processingCount: 3,
-      delayedCount: 1,
-      readyCount: 1,
-    }
+  it('returns an empty list when there are no orders', async () => {
+    api.get.mockResolvedValue({ data: [] })
 
-    api.get.mockResolvedValue({
-      data: metrics,
-    })
+    await expect(getKitchenOrders('ONLINE')).resolves.toEqual([])
+  })
 
-    const result = await getKitchenMetrics()
+  it('propagates errors when orders cannot be loaded', async () => {
+    const error = new Error('Network error')
+    api.get.mockRejectedValue(error)
 
-    expect(api.get).toHaveBeenCalledWith('/api/v1/kitchen/metrics')
-    expect(result).toEqual(metrics)
+    await expect(getKitchenOrders()).rejects.toBe(error)
+  })
+
+  it('requests and returns channel counters', async () => {
+    const counts = { total: 5, inStore: 3, delivery: 2 }
+    api.get.mockResolvedValue({ data: counts })
+
+    await expect(getKitchenChannelCounts()).resolves.toEqual(counts)
+
+    expect(api.get).toHaveBeenCalledWith(
+      '/api/v1/kitchen/orders/counts',
+    )
+  })
+
+  it('propagates errors when counters cannot be loaded', async () => {
+    const error = new Error('Network error')
+    api.get.mockRejectedValue(error)
+
+    await expect(getKitchenChannelCounts()).rejects.toBe(error)
+  })
+
+  it('requests and returns kitchen metrics', async () => {
+    const metrics = { activeOrders: 5 }
+    api.get.mockResolvedValue({ data: metrics })
+
+    await expect(getKitchenMetrics()).resolves.toEqual(metrics)
+
+    expect(api.get).toHaveBeenCalledWith(
+      '/api/v1/kitchen/metrics',
+    )
+  })
+
+  it('updates an order status and returns the backend response', async () => {
+    const updatedOrder = { id: 42, status: 'READY' }
+    api.patch.mockResolvedValue({ data: updatedOrder })
+
+    await expect(
+      updateKitchenOrderStatus(42, 'READY'),
+    ).resolves.toEqual(updatedOrder)
+
+    expect(api.patch).toHaveBeenCalledWith(
+      '/api/v1/kitchen/orders/42/status',
+      { status: 'READY' },
+    )
+  })
+
+  it('propagates errors when updating an order fails', async () => {
+    const error = new Error('Network error')
+    api.patch.mockRejectedValue(error)
+
+    await expect(
+      updateKitchenOrderStatus(42, 'READY'),
+    ).rejects.toBe(error)
   })
 })

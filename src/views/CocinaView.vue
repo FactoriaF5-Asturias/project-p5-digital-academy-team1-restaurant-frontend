@@ -4,34 +4,61 @@ import KitchenMetrics from '../components/KitchenMetrics.vue'
 import KitchenOrderList from '../components/KitchenOrderList.vue'
 import {
   getKitchenOrders,
+  getKitchenChannelCounts,
   getKitchenMetrics,
 } from '../services/kitchen.service'
 
 const orders = ref([])
 const metrics = ref(null)
+const selectedChannel = ref('ALL')
+const channelCounts = ref(null)
 
 const isLoadingOrders = ref(true)
 const isLoadingMetrics = ref(true)
 
 const ordersError = ref(null)
 const metricsError = ref(null)
+const countsError = ref(null)
+
+let ordersRequestId = 0
 
 async function loadOrders() {
+  const requestId = ++ordersRequestId
+
   isLoadingOrders.value = true
   ordersError.value = null
 
   try {
-    orders.value = await getKitchenOrders()
+    const result = await getKitchenOrders(selectedChannel.value)
+
+    if (requestId !== ordersRequestId) return
+
+    orders.value = result
   } catch {
+    if (requestId !== ordersRequestId) return
+
+    orders.value = []
     ordersError.value = 'No se han podido cargar las comandas.'
   } finally {
-    isLoadingOrders.value = false
+    if (requestId === ordersRequestId) {
+      isLoadingOrders.value = false
+    }
+  }
+}
+
+async function loadChannelCounts() {
+  countsError.value = null
+
+  try {
+    channelCounts.value = await getKitchenChannelCounts()
+  } catch {
+    channelCounts.value = null
+    countsError.value = 'No se han podido cargar los contadores.'
   }
 }
 
 async function loadMetrics() {
-  // Solo "cargando" la primera vez: al refrescar se mantienen las métricas en pantalla.
-  isLoadingMetrics.value = metrics.value === null
+  isLoadingMetrics.value = true
   metricsError.value = null
 
   try {
@@ -43,8 +70,22 @@ async function loadMetrics() {
   }
 }
 
+function handleChannelChange(channel) {
+  if (
+    !['ALL', 'ONSITE', 'ONLINE'].includes(channel) ||
+    channel === selectedChannel.value
+  ) {
+    return
+  }
+
+  selectedChannel.value = channel
+  loadOrders()
+  loadChannelCounts()
+}
+
 onMounted(() => {
   loadOrders()
+  loadChannelCounts()
   loadMetrics()
 })
 </script>
@@ -58,11 +99,21 @@ onMounted(() => {
     />
 
     <div class="mt-8">
+      <p
+        v-if="countsError"
+        class="mb-4 text-sm text-error"
+        role="alert"
+      >
+        {{ countsError }}
+      </p>
+
       <KitchenOrderList
         :orders="orders"
         :is-loading="isLoadingOrders"
         :error="ordersError"
-        @status-changed="loadMetrics"
+        :selected-channel="selectedChannel"
+        :channel-counts="channelCounts"
+        @channel-change="handleChannelChange"
       />
     </div>
   </main>

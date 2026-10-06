@@ -1,146 +1,142 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import KitchenOrderList from './KitchenOrderList.vue'
-import KitchenOrderCard from './KitchenOrderCard.vue'
+
+const orders = [
+  { id: 1, channel: 'ONSITE' },
+  { id: 2, channel: 'ONLINE' },
+]
+
+function mountList(props = {}) {
+  return mount(KitchenOrderList, {
+    props,
+    global: {
+      stubs: {
+        KitchenOrderCard: {
+          props: ['order'],
+          template: '<article>Comanda #{{ order.id }}</article>',
+        },
+      },
+    },
+  })
+}
+
+function buttonText(button) {
+  return button.text().replace(/\s+/g, ' ').trim()
+}
 
 describe('KitchenOrderList', () => {
-  it('shows the loading state', () => {
-    const wrapper = mount(KitchenOrderList, {
-      props: {
-        isLoading: true
-      }
-    })
+  it('shows the loading state and hides orders', () => {
+    const wrapper = mountList({ orders, isLoading: true })
 
     expect(wrapper.text()).toContain('Cargando comandas...')
+    expect(wrapper.findAll('article')).toHaveLength(0)
+    expect(wrapper.get('section').attributes('aria-busy')).toBe('true')
   })
 
-  it('shows the error state', () => {
-    const wrapper = mount(KitchenOrderList, {
-      props: {
-        error: 'Error al cargar las comandas'
-      }
+  it('shows the error state and hides orders', () => {
+    const wrapper = mountList({
+      orders,
+      error: 'No se han podido cargar las comandas.',
     })
 
-    expect(wrapper.text()).toContain('Error al cargar las comandas')
+    expect(wrapper.get('[role="alert"]').text()).toBe(
+      'No se han podido cargar las comandas.',
+    )
+    expect(wrapper.findAll('article')).toHaveLength(0)
   })
 
-  it('shows the empty state', () => {
-    const wrapper = mount(KitchenOrderList, {
-      props: {
-        orders: []
-      }
-    })
+  it('shows the empty state for all channels', () => {
+    const wrapper = mountList()
 
     expect(wrapper.text()).toContain('No hay comandas activas.')
   })
-  const orders = [
-  {
-    id: 1042,
-    elapsedTime: 16,
-    status: 'PROCESSING',
-    channel: 'IN_STORE',
-    products: [
-      {
-        name: 'Pull Nigiri',
-        quantity: 2
-      }
-    ]
-  },
-  {
-    id: 1043,
-    elapsedTime: 11,
-    status: 'PROCESSING',
-    channel: 'DELIVERY',
-    products: [
-      {
-        name: 'Commit Roll',
-        quantity: 3
-      }
-    ]
-  }
-]
 
-it('shows all orders by default', () => {
-  const wrapper = mount(KitchenOrderList, {
-    props: {
-      orders
-    }
+  it.each(['ONSITE', 'ONLINE'])(
+    'shows the empty state for channel %s',
+    (selectedChannel) => {
+      const wrapper = mountList({ selectedChannel })
+
+      expect(wrapper.text()).toContain(
+        'No hay comandas activas para este canal.',
+      )
+    },
+  )
+
+  it('renders the orders provided by the parent', () => {
+    const wrapper = mountList({ orders })
+
+    expect(wrapper.findAll('article')).toHaveLength(2)
+    expect(wrapper.text()).toContain('Comanda #1')
+    expect(wrapper.text()).toContain('Comanda #2')
   })
 
-  expect(wrapper.text()).toContain('#1042')
-  expect(wrapper.text()).toContain('#1043')
-})
+  it.each([
+    ['ALL', 0],
+    ['ONSITE', 1],
+    ['ONLINE', 2],
+  ])(
+    'emits channel %s when its button is clicked',
+    async (channel, index) => {
+      const wrapper = mountList()
 
-it('filters orders by in store channel', async () => {
-  const wrapper = mount(KitchenOrderList, {
-    props: {
-      orders
-    }
+      await wrapper.findAll('button')[index].trigger('click')
+
+      expect(wrapper.emitted('channel-change')).toEqual([[channel]])
+    },
+  )
+
+  it('highlights the selected channel', async () => {
+    const wrapper = mountList({ selectedChannel: 'ONSITE' })
+    const buttons = wrapper.findAll('button')
+
+    expect(buttons[0].attributes('aria-pressed')).toBe('false')
+    expect(buttons[1].attributes('aria-pressed')).toBe('true')
+    expect(buttons[1].classes()).toContain('btn-primary')
+    expect(buttons[2].attributes('aria-pressed')).toBe('false')
+
+    await wrapper.setProps({ selectedChannel: 'ONLINE' })
+
+    expect(buttons[1].attributes('aria-pressed')).toBe('false')
+    expect(buttons[2].attributes('aria-pressed')).toBe('true')
+    expect(buttons[2].classes()).toContain('btn-primary')
   })
 
-  const buttons = wrapper.findAll('button')
+  it('shows the counters returned by the backend', () => {
+    const wrapper = mountList({
+      channelCounts: {
+        total: 5,
+        inStore: 3,
+        delivery: 2,
+      },
+    })
 
-  await buttons[1].trigger('click')
+    const buttons = wrapper.findAll('button')
 
-  expect(wrapper.text()).toContain('#1042')
-  expect(wrapper.text()).not.toContain('#1043')
-})
-
-it('filters orders by delivery channel', async () => {
-  const wrapper = mount(KitchenOrderList, {
-    props: {
-      orders
-    }
+    expect(buttonText(buttons[0])).toBe('Todos (5)')
+    expect(buttonText(buttons[1])).toBe('En Sala (3)')
+    expect(buttonText(buttons[2])).toBe('A Domicilio (2)')
   })
 
-  const buttons = wrapper.findAll('button')
+  it('shows zero counters', () => {
+    const wrapper = mountList({
+      channelCounts: {
+        total: 0,
+        inStore: 0,
+        delivery: 0,
+      },
+    })
 
-  await buttons[2].trigger('click')
-
-  expect(wrapper.text()).not.toContain('#1042')
-  expect(wrapper.text()).toContain('#1043')
-})
-
-it('shows all orders again when all filter is selected', async () => {
-  const wrapper = mount(KitchenOrderList, {
-    props: {
-      orders
-    }
+    wrapper.findAll('button').forEach((button) => {
+      expect(buttonText(button)).toContain('(0)')
+    })
   })
 
-  const buttons = wrapper.findAll('button')
+  it('does not display counters before they are available', () => {
+    const wrapper = mountList()
 
-  await buttons[2].trigger('click')
-  await buttons[0].trigger('click')
-
-  expect(wrapper.text()).toContain('#1042')
-  expect(wrapper.text()).toContain('#1043')
-})
-
-it('keeps the selected filter visually active', async () => {
-  const wrapper = mount(KitchenOrderList, {
-    props: {
-      orders
-    }
+    wrapper.findAll('button').forEach((button) => {
+      expect(buttonText(button)).not.toContain('(')
+    })
   })
-
-  const buttons = wrapper.findAll('button')
-
-  await buttons[2].trigger('click')
-
-  expect(buttons[2].classes()).toContain('btn-primary')
-  expect(buttons[0].classes()).toContain('btn-secondary')
-})
-
-it('passes on the status change of an order to the view', async () => {
-  const wrapper = mount(KitchenOrderList, {
-    props: {
-      orders
-    }
-  })
-
-  await wrapper.findComponent(KitchenOrderCard).vm.$emit('status-changed', { id: 1042, status: 'READY' })
-
-  expect(wrapper.emitted('status-changed')).toEqual([[{ id: 1042, status: 'READY' }]])
-})
 })
