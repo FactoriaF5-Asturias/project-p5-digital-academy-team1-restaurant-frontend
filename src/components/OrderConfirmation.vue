@@ -9,6 +9,7 @@ import { useAuthStore } from "../stores/auth";
 import { createOrder } from "../services/orders.service";
 import { createCheckoutSession } from "../services/payments.service";
 import { HOME_DELIVERY_FEE } from "../constants/delivery";
+import { getMissingAddressFields } from "../utils/deliveryAddress";
 import {
   getBackendPaymentMethod,
   getPaymentStatusLabel,
@@ -23,6 +24,9 @@ const lastOrderStore = useLastOrderStore();
 const offersStore = useExclusiveOffersStore();
 const authStore = useAuthStore();
 
+const ADDRESS_INCOMPLETE_MESSAGE =
+  "Completa la dirección de entrega para confirmar el pedido.";
+
 const isSubmitting = ref(false);
 const errorMessage = ref(null);
 const paymentStatusMessage = ref(null);
@@ -35,8 +39,8 @@ const needsTableNumber = computed(
 const canConfirmOrder = computed(() => {
   if (cartStore.isEmpty) return false;
   if (needsTableNumber.value) return false;
-  if (checkoutStore.channel === "sala" && !checkoutStore.paymentMethod)
-    return false;
+  // Sala y domicilio necesitan un método de pago (el backend lo exige).
+  if (!checkoutStore.paymentMethod) return false;
   return true;
 });
 
@@ -77,7 +81,21 @@ function isHomeDeliveryOnlineCard() {
   );
 }
 
+// La dirección se comprueba al pulsar el botón para poder decir qué falta.
+function isHomeDeliveryAddressIncomplete() {
+  return (
+    checkoutStore.channel === "domicilio" &&
+    getMissingAddressFields(checkoutStore.address).length > 0
+  );
+}
+
 async function confirmOrder() {
+  if (isHomeDeliveryAddressIncomplete()) {
+    checkoutStore.revealAddressErrors();
+    errorMessage.value = ADDRESS_INCOMPLETE_MESSAGE;
+    return;
+  }
+
   isSubmitting.value = true;
   errorMessage.value = null;
 

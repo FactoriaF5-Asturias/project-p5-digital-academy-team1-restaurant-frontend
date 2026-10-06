@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useSalesKpi } from '../composables/useSalesKpi'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 import KpiTiles from './KpiTiles.vue'
 import ChannelSplitBar from './ChannelSplitBar.vue'
 import WeeklySalesChart from './WeeklySalesChart.vue'
@@ -12,6 +13,7 @@ import LoadingSpinner from './LoadingSpinner.vue'
 const { kpi, isLoading, loadError, loadKpi } = useSalesKpi()
 
 onMounted(loadKpi)
+useAutoRefresh(loadKpi)
 </script>
 
 <template>

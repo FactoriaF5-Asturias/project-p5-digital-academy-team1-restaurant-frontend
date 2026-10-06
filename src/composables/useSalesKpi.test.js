@@ -47,4 +47,15 @@ describe('useSalesKpi', () => {
       'No se han podido cargar los KPI de ventas. Inténtalo de nuevo más tarde.'
     )
   })
+
+  it('al refrescar mantiene los KPI en pantalla sin mostrar "cargando"', async () => {
+    getSalesKpi.mockResolvedValue({ today: { revenue: 100, previousRevenue: 80 } })
+    const { isLoading, loadKpi } = useSalesKpi()
+    await loadKpi()
+
+    const refreshing = loadKpi()
+
+    expect(isLoading.value).toBe(false)
+    await refreshing
+  })
 })

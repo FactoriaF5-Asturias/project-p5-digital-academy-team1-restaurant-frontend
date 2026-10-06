@@ -5,6 +5,8 @@ import {
   getKitchenChannelCounts,
   getKitchenMetrics,
   updateKitchenOrderStatus,
+  getAttendedOrders,
+  markOrderAsPaid,
 } from './kitchen.service'
 
 vi.mock('./api', () => ({
@@ -143,5 +145,92 @@ describe('kitchen.service', () => {
     await expect(
       updateKitchenOrderStatus(42, 'READY'),
     ).rejects.toBe(error)
+  })
+
+  it('combines attended orders and sorts them by descending id', async () => {
+    const ordersByStatus = {
+      READY: [
+        {
+          id: 5,
+          status: 'READY',
+          channel: 'ONSITE',
+          tableNumber: 2,
+          total: 8.99,
+        },
+      ],
+      ONTHEWAY: [
+        {
+          id: 2,
+          status: 'ONTHEWAY',
+          channel: 'ONLINE',
+          tableNumber: null,
+          total: 8.99,
+        },
+      ],
+      DELIVERED: [
+        {
+          id: 7,
+          status: 'DELIVERED',
+          channel: 'ONLINE',
+          tableNumber: null,
+          total: '11.55',
+        },
+      ],
+    }
+
+    api.get.mockImplementation((_url, { params }) =>
+      Promise.resolve({
+        data: ordersByStatus[params.status],
+      }),
+    )
+
+    const result = await getAttendedOrders()
+
+    for (const status of ['READY', 'ONTHEWAY', 'DELIVERED']) {
+      expect(api.get).toHaveBeenCalledWith(
+        '/api/v1/orders',
+        { params: { status } },
+      )
+    }
+
+    expect(result).toEqual([
+      {
+        id: 7,
+        status: 'DELIVERED',
+        channel: 'ONLINE',
+        tableNumber: null,
+        total: 11.55,
+      },
+      {
+        id: 5,
+        status: 'READY',
+        channel: 'ONSITE',
+        tableNumber: 2,
+        total: 8.99,
+      },
+      {
+        id: 2,
+        status: 'ONTHEWAY',
+        channel: 'ONLINE',
+        tableNumber: null,
+        total: 8.99,
+      },
+    ])
+  })
+
+  it('marks an order as paid', async () => {
+    const updatedOrder = {
+      id: 3,
+      status: 'PAID',
+      paymentStatus: null,
+    }
+
+    api.patch.mockResolvedValue({ data: updatedOrder })
+
+    await expect(markOrderAsPaid(3)).resolves.toEqual(updatedOrder)
+
+    expect(api.patch).toHaveBeenCalledWith(
+      '/api/v1/orders/3/paid',
+    )
   })
 })

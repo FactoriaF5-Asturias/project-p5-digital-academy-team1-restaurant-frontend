@@ -7,6 +7,7 @@ import {
   getKitchenChannelCounts,
   getKitchenMetrics,
 } from '../services/kitchen.service'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 
 const orders = ref([])
 const metrics = ref(null)
@@ -21,15 +22,21 @@ const metricsError = ref(null)
 const countsError = ref(null)
 
 let ordersRequestId = 0
+let countsRequestId = 0
+let metricsRequestId = 0
 
-async function loadOrders() {
+async function loadOrders({ silent = false } = {}) {
   const requestId = ++ordersRequestId
+  const channel = selectedChannel.value
 
-  isLoadingOrders.value = true
+  if (!silent) {
+    isLoadingOrders.value = true
+  }
+
   ordersError.value = null
 
   try {
-    const result = await getKitchenOrders(selectedChannel.value)
+    const result = await getKitchenOrders(channel)
 
     if (requestId !== ordersRequestId) return
 
@@ -37,7 +44,10 @@ async function loadOrders() {
   } catch {
     if (requestId !== ordersRequestId) return
 
-    orders.value = []
+    if (!silent) {
+      orders.value = []
+    }
+
     ordersError.value = 'No se han podido cargar las comandas.'
   } finally {
     if (requestId === ordersRequestId) {
@@ -47,26 +57,46 @@ async function loadOrders() {
 }
 
 async function loadChannelCounts() {
+  const requestId = ++countsRequestId
+
   countsError.value = null
 
   try {
-    channelCounts.value = await getKitchenChannelCounts()
+    const result = await getKitchenChannelCounts()
+
+    if (requestId !== countsRequestId) return
+
+    channelCounts.value = result
   } catch {
-    channelCounts.value = null
+    if (requestId !== countsRequestId) return
+
     countsError.value = 'No se han podido cargar los contadores.'
   }
 }
 
-async function loadMetrics() {
-  isLoadingMetrics.value = true
+async function loadMetrics({ silent = false } = {}) {
+  const requestId = ++metricsRequestId
+
+  if (!silent) {
+    isLoadingMetrics.value = true
+  }
+
   metricsError.value = null
 
   try {
-    metrics.value = await getKitchenMetrics()
+    const result = await getKitchenMetrics()
+
+    if (requestId !== metricsRequestId) return
+
+    metrics.value = result
   } catch {
+    if (requestId !== metricsRequestId) return
+
     metricsError.value = 'No se han podido cargar las métricas de cocina.'
   } finally {
-    isLoadingMetrics.value = false
+    if (requestId === metricsRequestId) {
+      isLoadingMetrics.value = false
+    }
   }
 }
 
@@ -83,11 +113,21 @@ function handleChannelChange(channel) {
   loadChannelCounts()
 }
 
+function handleStatusChanged() {
+  return Promise.all([
+    loadOrders({ silent: true }),
+    loadChannelCounts(),
+    loadMetrics({ silent: true }),
+  ])
+}
+
 onMounted(() => {
   loadOrders()
   loadChannelCounts()
   loadMetrics()
 })
+
+useAutoRefresh(handleStatusChanged)
 </script>
 
 <template>
@@ -114,6 +154,7 @@ onMounted(() => {
         :selected-channel="selectedChannel"
         :channel-counts="channelCounts"
         @channel-change="handleChannelChange"
+        @status-changed="handleStatusChanged"
       />
     </div>
   </main>

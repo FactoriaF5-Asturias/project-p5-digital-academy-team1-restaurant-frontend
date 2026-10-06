@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import KitchenOrderCard from './KitchenOrderCard.vue'
-import { updateKitchenOrderStatus } from '../services/kitchen.service'
+import { markOrderAsPaid, updateKitchenOrderStatus } from '../services/kitchen.service'
 
 vi.mock('../services/kitchen.service', () => ({
   updateKitchenOrderStatus: vi.fn(),
+  markOrderAsPaid: vi.fn(),
 }))
 
 const order = {
@@ -166,5 +167,72 @@ describe('KitchenOrderCard', () => {
     await flushPromises()
 
     expect(wrapper.emitted('status-changed')).toBeUndefined()
+  })
+
+  describe('dine-in payment', () => {
+    const unpaidOnsiteOrder = {
+      ...order,
+      status: 'PLACED',
+      channel: 'ONSITE',
+      paymentStatus: 'PENDING_CASH',
+    }
+
+    function findCollectButton(wrapper) {
+      return wrapper.find('.kitchen-order-card__collect')
+    }
+
+    it('offers to register the cash payment of a dine-in order that has just arrived', () => {
+      const wrapper = mount(KitchenOrderCard, { props: { order: unpaidOnsiteOrder } })
+
+      expect(findCollectButton(wrapper).text()).toBe('Cobrado en caja')
+    })
+
+    it('names the button after the card terminal when the table pays by card', () => {
+      const wrapper = mount(KitchenOrderCard, {
+        props: { order: { ...unpaidOnsiteOrder, paymentStatus: 'PENDING_CARD_TERMINAL' } },
+      })
+
+      expect(findCollectButton(wrapper).text()).toBe('Cobrado con datáfono')
+    })
+
+    it('does not offer it for paid, home delivery or already started orders', () => {
+      const paid = mount(KitchenOrderCard, {
+        props: { order: { ...unpaidOnsiteOrder, paymentStatus: null } },
+      })
+      const homeDelivery = mount(KitchenOrderCard, {
+        props: { order: { ...unpaidOnsiteOrder, channel: 'ONLINE', paymentStatus: 'PENDING_CASH_ON_DELIVERY' } },
+      })
+      const started = mount(KitchenOrderCard, {
+        props: { order: { ...unpaidOnsiteOrder, status: 'PROCESSING' } },
+      })
+
+      expect(findCollectButton(paid).exists()).toBe(false)
+      expect(findCollectButton(homeDelivery).exists()).toBe(false)
+      expect(findCollectButton(started).exists()).toBe(false)
+    })
+
+    it('marks the order as paid, hides the button and notifies the view', async () => {
+      markOrderAsPaid.mockResolvedValue({})
+      const wrapper = mount(KitchenOrderCard, { props: { order: unpaidOnsiteOrder } })
+
+      await findCollectButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(markOrderAsPaid).toHaveBeenCalledWith(1042)
+      expect(findCollectButton(wrapper).exists()).toBe(false)
+      expect(wrapper.text()).toContain('Estado: Pagado')
+      expect(wrapper.emitted('status-changed')).toEqual([[{ id: 1042, status: 'PAID' }]])
+    })
+
+    it('keeps the button and shows an error when the payment cannot be registered', async () => {
+      markOrderAsPaid.mockRejectedValue(new Error('network error'))
+      const wrapper = mount(KitchenOrderCard, { props: { order: unpaidOnsiteOrder } })
+
+      await findCollectButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(findCollectButton(wrapper).exists()).toBe(true)
+      expect(wrapper.text()).toContain('No se ha podido registrar el cobro.')
+    })
   })
 })

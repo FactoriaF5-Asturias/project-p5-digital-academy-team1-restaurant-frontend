@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { DINE_IN_PAYMENT_METHODS, getBackendPaymentMethod, getPaymentStatusLabel } from './paymentMethods'
+import {
+  DINE_IN_PAYMENT_METHODS,
+  getBackendPaymentMethod,
+  getPaymentStatusLabel,
+  getCollectPaymentLabel,
+} from './paymentMethods'
 
 describe('getBackendPaymentMethod', () => {
   it('translates each dine-in payment method to its real backend enum value', () => {
@@ -36,5 +41,17 @@ describe('getPaymentStatusLabel', () => {
 describe('DINE_IN_PAYMENT_METHODS', () => {
   it('is frozen so it cannot be mutated by mistake', () => {
     expect(Object.isFrozen(DINE_IN_PAYMENT_METHODS)).toBe(true)
+  })
+})
+
+describe('getCollectPaymentLabel', () => {
+  it('names the collect button of each dine-in payment', () => {
+    expect(getCollectPaymentLabel('PENDING_CASH')).toBe('Cobrado en caja')
+    expect(getCollectPaymentLabel('PENDING_CARD_TERMINAL')).toBe('Cobrado con datáfono')
+  })
+
+  it('returns null for payments that are not collected in the restaurant', () => {
+    expect(getCollectPaymentLabel('PENDING_CASH_ON_DELIVERY')).toBeNull()
+    expect(getCollectPaymentLabel(null)).toBeNull()
   })
 })

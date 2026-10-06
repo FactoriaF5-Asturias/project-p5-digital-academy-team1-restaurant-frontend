@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
-import { updateKitchenOrderStatus } from '../services/kitchen.service'
+import { computed, ref } from 'vue'
+import { markOrderAsPaid, updateKitchenOrderStatus } from '../services/kitchen.service'
+import { getCollectPaymentLabel } from '../constants/paymentMethods'
 import { ORDER_STATUS_LABELS, getLabel } from '../constants/invoiceLabels'
 
 const props = defineProps({
@@ -14,8 +15,39 @@ const props = defineProps({
 const emit = defineEmits(['status-changed'])
 
 const currentStatus = ref(props.order.status ?? 'PROCESSING')
+const currentPaymentStatus = ref(props.order.paymentStatus ?? null)
 const isUpdating = ref(false)
 const error = ref(null)
+
+const ONSITE_CHANNEL = 'ONSITE'
+// El backend solo acepta el cobro mientras el pedido está recién recibido.
+const COLLECTABLE_STATUS = 'PLACED'
+const PAID_STATUS = 'PAID'
+
+// Botón "Cobrado en caja / con datáfono": solo en pedidos de sala aún sin cobrar.
+const collectPaymentLabel = computed(() => {
+  if (props.order.channel !== ONSITE_CHANNEL) return null
+  if (currentStatus.value !== COLLECTABLE_STATUS) return null
+  return getCollectPaymentLabel(currentPaymentStatus.value)
+})
+
+async function collectPayment() {
+  if (isUpdating.value) return
+
+  isUpdating.value = true
+  error.value = null
+
+  try {
+    await markOrderAsPaid(props.order.id)
+    currentPaymentStatus.value = null
+    currentStatus.value = PAID_STATUS
+    emit('status-changed', { id: props.order.id, status: PAID_STATUS })
+  } catch {
+    error.value = 'No se ha podido registrar el cobro.'
+  } finally {
+    isUpdating.value = false
+  }
+}
 
 async function changeStatus(status) {
   if (currentStatus.value === status || isUpdating.value) {
@@ -83,6 +115,16 @@ async function changeStatus(status) {
       </p>
     </div>
 
+    <button
+      v-if="collectPaymentLabel"
+      type="button"
+      class="kitchen-order-card__collect"
+      :disabled="isUpdating"
+      @click="collectPayment"
+    >
+      {{ collectPaymentLabel }}
+    </button>
+
     <div class="mt-6 flex flex-wrap gap-2">
       <button
         type="button"
@@ -124,3 +166,12 @@ async function changeStatus(status) {
     </p>
   </article>
 </template>
+
+<style scoped>
+@reference "../style.css";
+
+/* Cobro de un pedido de sala: verde para distinguirlo de los cambios de estado */
+.kitchen-order-card__collect {
+  @apply mt-4 w-full rounded-lg border border-secondary bg-secondary-container px-4 py-2 text-sm font-semibold text-on-secondary-container transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50;
+}
+</style>

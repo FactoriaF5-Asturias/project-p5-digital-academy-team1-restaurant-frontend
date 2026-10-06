@@ -1,6 +1,13 @@
 import api from './api'
 
 const KITCHEN_ENDPOINT = '/api/v1/kitchen'
+const ORDERS_ENDPOINT = '/api/v1/orders'
+
+const ATTENDED_STATUSES = Object.freeze([
+  'READY',
+  'ONTHEWAY',
+  'DELIVERED',
+])
 
 export async function getKitchenOrders(channel = 'ALL') {
   const params = channel === 'ALL' ? {} : { channel }
@@ -42,6 +49,35 @@ export async function updateKitchenOrderStatus(orderId, status) {
   const { data } = await api.patch(
     `${KITCHEN_ENDPOINT}/orders/${orderId}/status`,
     { status },
+  )
+
+  return data
+}
+
+export async function getAttendedOrders() {
+  const responses = await Promise.all(
+    ATTENDED_STATUSES.map((status) =>
+      api.get(ORDERS_ENDPOINT, {
+        params: { status },
+      }),
+    ),
+  )
+
+  return responses
+    .flatMap((response) => response.data)
+    .map((order) => ({
+      id: order.id,
+      status: order.status,
+      channel: order.channel,
+      tableNumber: order.tableNumber,
+      total: Number(order.total),
+    }))
+    .sort((first, second) => second.id - first.id)
+}
+
+export async function markOrderAsPaid(orderId) {
+  const { data } = await api.patch(
+    `${ORDERS_ENDPOINT}/${orderId}/paid`,
   )
 
   return data

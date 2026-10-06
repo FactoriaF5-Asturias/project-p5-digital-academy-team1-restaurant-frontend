@@ -79,4 +79,15 @@ describe('usePaidInvoices', () => {
     expect(currentPage.value).toBe(1)
     expect(getPaidInvoices).toHaveBeenLastCalledWith({ page: 1, search: 'Mesa 4' })
   })
+
+  it('al refrescar mantiene las facturas en pantalla sin mostrar "cargando"', async () => {
+    const { isLoading, invoices, loadInvoices } = usePaidInvoices()
+    await loadInvoices()
+
+    const refreshing = loadInvoices()
+
+    expect(isLoading.value).toBe(false)
+    expect(invoices.value).toEqual(PAGE.items)
+    await refreshing
+  })
 })

@@ -17,6 +17,7 @@ export function usePendingDeliveries() {
   let timer = null
   let disposed = false
   let requestId = 0
+  let hasLoaded = false
 
   function scheduleRefresh() {
     clearTimeout(timer)
@@ -35,7 +36,7 @@ export function usePendingDeliveries() {
 
     clearTimeout(timer)
 
-    if (!silent) {
+    if (!silent && !hasLoaded) {
       isLoading.value = true
     }
 
@@ -55,6 +56,7 @@ export function usePendingDeliveries() {
     } finally {
       if (!disposed && currentRequest === requestId) {
         isLoading.value = false
+        hasLoaded = true
         scheduleRefresh()
       }
     }
@@ -76,7 +78,6 @@ export function usePendingDeliveries() {
 
       if (disposed) return false
 
-      // Invalida una consulta anterior que pudiera devolver este pedido.
       requestId += 1
       isLoading.value = false
       orders.value = orders.value.filter(

@@ -4,6 +4,7 @@ import { DEFAULT_REPORT_PERIOD, REPORT_PERIOD_OPTIONS } from '../constants/repor
 import { formatPeriodRange, getPeriodRange } from '../utils/reportPeriodRange'
 import { useSalesSummary } from '../composables/useSalesSummary'
 import { useSalesReportDownload } from '../composables/useSalesReportDownload'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 import PeriodSelector from './PeriodSelector.vue'
 import SalesSummaryCards from './SalesSummaryCards.vue'
 import LoadingSpinner from './LoadingSpinner.vue'
@@ -19,6 +20,7 @@ const { summary, isLoading, loadError, averageTicket, loadSummary } = useSalesSu
 const { isDownloading, downloadError, downloadReport } = useSalesReportDownload()
 
 watch(selectedPeriod, loadSummary, { immediate: true })
+useAutoRefresh(() => loadSummary(selectedPeriod.value))
 
 function handleDownload() {
   downloadReport(selectedPeriod.value)

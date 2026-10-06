@@ -25,6 +25,7 @@ const routes = [
 ];
 // Los pedidos en sala necesitan mesa: por defecto los tests tienen una ya indicada.
 const TABLE_NUMBER = 3;
+const DELIVERY_ADDRESS = { street: "Calle Mayor 1", city: "Avilés", postalCode: "33400" };
 async function mountOrderConfirmation() {
   const router = createRouter({ history: createWebHistory(), routes });
   router.push("/cesta");
@@ -93,6 +94,37 @@ describe("OrderConfirmation", () => {
     await flushPromises();
 
     expect(wrapper.find(".order-confirmation__hint").exists()).toBe(false);
+  });
+
+  it("disables the confirm button for home delivery until a payment method is chosen", async () => {
+    const { wrapper, cartStore, checkoutStore } = await mountOrderConfirmation();
+    cartStore.addProduct({ id: 1, name: "Salmon Roll", price: 10 });
+    checkoutStore.setChannel("domicilio");
+    checkoutStore.setAddress(DELIVERY_ADDRESS);
+    await flushPromises();
+
+    expect(
+      wrapper.find(".order-confirmation__button").attributes("disabled"),
+    ).toBeDefined();
+  });
+
+  it("asks for the missing address fields and does not send a home delivery order without them", async () => {
+    const createOrderSpy = vi.spyOn(ordersService, "createOrder");
+    const { wrapper, cartStore, checkoutStore } = await mountOrderConfirmation();
+    cartStore.addProduct({ id: 1, name: "Salmon Roll", price: 10 });
+    checkoutStore.setChannel("domicilio");
+    checkoutStore.setPaymentMethod("cashOnDelivery");
+    checkoutStore.setAddress({ street: "Calle Uría 10" });
+    await flushPromises();
+
+    await wrapper.find(".order-confirmation__button").trigger("click");
+    await flushPromises();
+
+    expect(createOrderSpy).not.toHaveBeenCalled();
+    expect(checkoutStore.showAddressErrors).toBe(true);
+    expect(wrapper.find(".order-confirmation__error").text()).toBe(
+      "Completa la dirección de entrega para confirmar el pedido.",
+    );
   });
 
   it("enables the confirm button once a dine-in payment method is selected", async () => {
@@ -342,6 +374,7 @@ describe("OrderConfirmation", () => {
       cartStore.addProduct({ id: 1, name: "Salmon Roll", price: 10 });
       checkoutStore.setChannel("domicilio");
       checkoutStore.setPaymentMethod("cashOnDelivery");
+      checkoutStore.setAddress(DELIVERY_ADDRESS);
       await flushPromises();
 
       await wrapper.find(".order-confirmation__button").trigger("click");

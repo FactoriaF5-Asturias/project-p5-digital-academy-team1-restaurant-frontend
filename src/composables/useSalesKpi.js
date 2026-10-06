@@ -10,8 +10,11 @@ export function useSalesKpi() {
   const isLoading = ref(false)
   const loadError = ref('')
 
+  // Solo "cargando" la primera vez: al refrescar se mantienen los datos en pantalla.
+  let hasLoaded = false
+
   async function loadKpi() {
-    isLoading.value = true
+    isLoading.value = !hasLoaded
     loadError.value = ''
 
     try {
@@ -22,6 +25,7 @@ export function useSalesKpi() {
       console.error('[useSalesKpi] Error al obtener los KPI de ventas:', err)
     } finally {
       isLoading.value = false
+      hasLoaded = true
     }
   }
 

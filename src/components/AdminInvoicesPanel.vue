@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { usePaidInvoices } from '../composables/usePaidInvoices'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 import InvoicesSearch from './InvoicesSearch.vue'
 import InvoicesTable from './InvoicesTable.vue'
 import LoadingSpinner from './LoadingSpinner.vue'
@@ -21,6 +22,8 @@ const {
 } = usePaidInvoices()
 
 onMounted(loadInvoices)
+// Mantiene la página y la búsqueda actuales: solo trae las facturas nuevas.
+useAutoRefresh(loadInvoices)
 </script>
 
 <template>

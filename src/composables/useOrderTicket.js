@@ -8,7 +8,7 @@ import { FINAL_ORDER_STATUS } from '../constants/orderTracking'
 // cierto tiempo para que el cliente vea cómo cambia el estado que marca cocina
 // y reparto. `reference` es { id, token } o null si no hay pedido.
 
-export const REFRESH_INTERVAL_MS = 30000
+export const REFRESH_INTERVAL_MS = 10000
 
 const LOAD_ERROR_MESSAGE = 'No se ha podido cargar tu pedido. Inténtalo de nuevo más tarde.'
 

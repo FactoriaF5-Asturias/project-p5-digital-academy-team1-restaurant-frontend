@@ -16,8 +16,11 @@ export function usePaidInvoices() {
   const totalPages = ref(0)
   const searchTerm = ref('')
 
+  // Solo "cargando" la primera vez: al refrescar se mantienen los datos en pantalla.
+  let hasLoaded = false
+
   async function loadInvoices() {
-    isLoading.value = true
+    isLoading.value = !hasLoaded
     loadError.value = ''
 
     try {
@@ -34,6 +37,7 @@ export function usePaidInvoices() {
       console.error('[usePaidInvoices] Error al obtener las facturas:', err)
     } finally {
       isLoading.value = false
+      hasLoaded = true
     }
   }
 

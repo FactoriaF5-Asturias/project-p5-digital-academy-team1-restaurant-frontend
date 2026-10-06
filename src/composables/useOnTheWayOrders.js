@@ -16,8 +16,11 @@ export function useOnTheWayOrders() {
   // Pedido en efectivo pendiente de confirmar el cobro.
   const orderToConfirm = ref(null)
 
+  // Solo "cargando" la primera vez: al refrescar se mantienen los datos en pantalla.
+  let hasLoaded = false
+
   async function fetchOrders() {
-    isLoading.value = true
+    isLoading.value = !hasLoaded
     error.value = null
 
     try {
@@ -27,6 +30,7 @@ export function useOnTheWayOrders() {
       console.error('[useOnTheWayOrders] Error al cargar los pedidos:', err)
     } finally {
       isLoading.value = false
+      hasLoaded = true
     }
   }
 

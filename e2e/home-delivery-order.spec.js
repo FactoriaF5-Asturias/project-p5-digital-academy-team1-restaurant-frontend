@@ -14,6 +14,8 @@ test('un pedido a domicilio en efectivo llega a facturación al cobrarse en la e
 
     await page.goto('/cesta')
     await page.getByRole('button', { name: 'A domicilio' }).click()
+    // El cliente de prueba tiene dirección en su perfil: elegimos otra solo para este pedido.
+    await page.getByRole('radio', { name: /Otra dirección/ }).click()
     await page.locator('#address-street').fill('Calle Mayor 1')
     await page.locator('#address-city').fill('Avilés')
     await page.locator('#address-postal-code').fill('33400')

@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import CocinaView from './CocinaView.vue'
 import KitchenOrderList from '../components/KitchenOrderList.vue'
@@ -7,6 +14,7 @@ import {
   getKitchenChannelCounts,
   getKitchenMetrics,
 } from '../services/kitchen.service'
+import { AUTO_REFRESH_INTERVAL_MS } from '../constants/autoRefresh'
 
 vi.mock('../services/kitchen.service', () => ({
   getKitchenOrders: vi.fn(),
@@ -14,18 +22,29 @@ vi.mock('../services/kitchen.service', () => ({
   getKitchenMetrics: vi.fn(),
 }))
 
+let wrappers = []
+
 function mountView() {
-  return mount(CocinaView, {
+  const wrapper = mount(CocinaView, {
     global: {
       stubs: {
         KitchenMetrics: true,
+        KitchenAttendedOrders: true,
         KitchenOrderCard: {
           props: ['order'],
+          emits: ['status-changed'],
           template: '<article>Comanda #{{ order.id }}</article>',
+        },
+        LoadingSpinner: {
+          props: ['label'],
+          template: '<p role="status">{{ label }}</p>',
         },
       },
     },
   })
+
+  wrappers.push(wrapper)
+  return wrapper
 }
 
 describe('CocinaView', () => {
@@ -41,7 +60,13 @@ describe('CocinaView', () => {
     getKitchenMetrics.mockResolvedValue({})
   })
 
-  it('loads all orders, counters and metrics on mount', async () => {
+  afterEach(() => {
+    wrappers.forEach((wrapper) => wrapper.unmount())
+    wrappers = []
+    vi.useRealTimers()
+  })
+
+  it('loads orders, counters and metrics on mount', async () => {
     const wrapper = mountView()
     await flushPromises()
 
@@ -57,7 +82,7 @@ describe('CocinaView', () => {
   it('shows loading while orders are being fetched', async () => {
     let resolveRequest
 
-    getKitchenOrders.mockReturnValue(
+    getKitchenOrders.mockReturnValueOnce(
       new Promise((resolve) => {
         resolveRequest = resolve
       }),
@@ -188,5 +213,82 @@ describe('CocinaView', () => {
 
     expect(wrapper.text()).toContain('Comanda #99')
     expect(wrapper.text()).not.toContain('Comanda #1')
+  })
+
+  it('refreshes orders, counters and metrics after a status change', async () => {
+    getKitchenOrders.mockResolvedValueOnce([{ id: 42 }])
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    getKitchenOrders.mockResolvedValueOnce([])
+    getKitchenChannelCounts.mockResolvedValueOnce({
+      total: 0,
+      inStore: 0,
+      delivery: 0,
+    })
+
+    wrapper.getComponent(KitchenOrderList).vm.$emit(
+      'status-changed',
+      { id: 42, status: 'READY' },
+    )
+
+    await flushPromises()
+
+    expect(getKitchenOrders).toHaveBeenCalledTimes(2)
+    expect(getKitchenChannelCounts).toHaveBeenCalledTimes(2)
+    expect(getKitchenMetrics).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).not.toContain('Comanda #42')
+    expect(
+      wrapper.getComponent(KitchenOrderList).props('channelCounts'),
+    ).toEqual({ total: 0, inStore: 0, delivery: 0 })
+  })
+
+  it('refreshes automatically without hiding existing orders', async () => {
+    vi.useFakeTimers()
+
+    getKitchenOrders.mockResolvedValueOnce([{ id: 42 }])
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    let resolveRefresh
+
+    getKitchenOrders.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRefresh = resolve
+      }),
+    )
+
+    await vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS)
+
+    expect(
+      wrapper.getComponent(KitchenOrderList).props('isLoading'),
+    ).toBe(false)
+    expect(wrapper.text()).toContain('Comanda #42')
+
+    resolveRefresh([{ id: 42 }, { id: 43 }])
+    await flushPromises()
+
+    expect(getKitchenOrders).toHaveBeenCalledTimes(2)
+    expect(getKitchenChannelCounts).toHaveBeenCalledTimes(2)
+    expect(getKitchenMetrics).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('Comanda #43')
+  })
+
+  it('stops automatic refresh when unmounted', async () => {
+    vi.useFakeTimers()
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    wrapper.unmount()
+    wrappers = []
+
+    await vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS * 2)
+
+    expect(getKitchenOrders).toHaveBeenCalledTimes(1)
+    expect(getKitchenChannelCounts).toHaveBeenCalledTimes(1)
+    expect(getKitchenMetrics).toHaveBeenCalledTimes(1)
   })
 })

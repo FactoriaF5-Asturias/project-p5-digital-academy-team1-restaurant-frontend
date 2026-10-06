@@ -1,10 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useDeliveredTodayOrders } from './useDeliveredTodayOrders'
 import * as ordersService from '../services/orders.service'
 
 describe('useDeliveredTodayOrders', () => {
+    // Hora fija a mediodía: "hace 2 horas" sigue siendo hoy, se ejecute cuando se ejecute.
+  const FIXED_NOW = new Date(2026, 9, 6, 12, 0, 0)
+
   beforeEach(() => {
     vi.restoreAllMocks()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(FIXED_NOW)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('keeps only the orders delivered today', async () => {

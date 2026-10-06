@@ -16,8 +16,11 @@ export function useSalesSummary() {
     return summary.value.revenue / summary.value.orders
   })
 
+  // Solo "cargando" la primera vez: al refrescar se mantienen los datos en pantalla.
+  let hasLoaded = false
+
   async function loadSummary(period) {
-    isLoading.value = true
+    isLoading.value = !hasLoaded
     loadError.value = ''
 
     try {
@@ -28,6 +31,7 @@ export function useSalesSummary() {
       console.error('[useSalesSummary] Error al obtener el resumen de ventas:', err)
     } finally {
       isLoading.value = false
+      hasLoaded = true
     }
   }
 

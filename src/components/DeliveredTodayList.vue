@@ -1,10 +1,12 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useDeliveredTodayOrders } from '../composables/useDeliveredTodayOrders'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 
 const { orders, isLoading, error, fetchOrders } = useDeliveredTodayOrders()
 
 onMounted(fetchOrders)
+useAutoRefresh(fetchOrders)
 
 defineExpose({ refresh: fetchOrders })
 

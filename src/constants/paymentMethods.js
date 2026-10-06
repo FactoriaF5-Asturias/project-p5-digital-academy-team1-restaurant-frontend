@@ -14,6 +14,7 @@ export const DINE_IN_PAYMENT_METHODS = Object.freeze([
     backendPaymentStatus: 'PENDING_CASH',
     label: 'Pago en caja',
     pendingStatusLabel: 'pendiente de cobro en caja',
+    collectLabel: 'Cobrado en caja',
   },
   {
     value: 'cardOnTable',
@@ -21,6 +22,7 @@ export const DINE_IN_PAYMENT_METHODS = Object.freeze([
     backendPaymentStatus: 'PENDING_CARD_TERMINAL',
     label: 'Tarjeta en mesa',
     pendingStatusLabel: 'pago pendiente en mesa',
+    collectLabel: 'Cobrado con datáfono',
   },
 ])
 
@@ -67,4 +69,13 @@ export function getPaymentStatusLabel(paymentStatus) {
     (method) => method.backendPaymentStatus === paymentStatus
   )
   return method ? method.pendingStatusLabel : null
+}
+
+// Texto del botón con el que el personal confirma que ha cobrado un pedido de
+// sala (p. ej. 'PENDING_CASH' → 'Cobrado en caja'). Null si no se cobra en sala.
+export function getCollectPaymentLabel(paymentStatus) {
+  const method = DINE_IN_PAYMENT_METHODS.find(
+    (method) => method.backendPaymentStatus === paymentStatus
+  )
+  return method ? method.collectLabel : null
 }

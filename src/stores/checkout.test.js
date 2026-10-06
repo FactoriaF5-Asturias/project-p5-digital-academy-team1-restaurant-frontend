@@ -104,4 +104,36 @@ describe("useCheckoutStore", () => {
 
     expect(checkoutStore.paymentMethod).toBe("cardOnTable");
   });
+
+  it("uses a copy of the profile address for the order", () => {
+    const checkoutStore = useCheckoutStore();
+    const profileAddress = { street: "Calle Mayor 1", city: "Avilés", postalCode: "33400" };
+
+    checkoutStore.useProfileAddress(profileAddress);
+
+    expect(checkoutStore.addressSource).toBe("profile");
+    expect(checkoutStore.address).toEqual(profileAddress);
+    expect(checkoutStore.address).not.toBe(profileAddress);
+  });
+
+  it("starts an empty address when the customer wants another one", () => {
+    const checkoutStore = useCheckoutStore();
+    checkoutStore.useProfileAddress({ street: "Calle Mayor 1", city: "Avilés", postalCode: "33400" });
+
+    checkoutStore.useOtherAddress();
+
+    expect(checkoutStore.addressSource).toBe("other");
+    expect(checkoutStore.address).toBeNull();
+  });
+
+  it("shows the address errors after a confirmation attempt and hides them when the channel changes", () => {
+    const checkoutStore = useCheckoutStore();
+    checkoutStore.setChannel("domicilio");
+
+    checkoutStore.revealAddressErrors();
+    expect(checkoutStore.showAddressErrors).toBe(true);
+
+    checkoutStore.setChannel("sala");
+    expect(checkoutStore.showAddressErrors).toBe(false);
+  });
 });

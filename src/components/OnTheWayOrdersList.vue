@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useOnTheWayOrders } from '../composables/useOnTheWayOrders'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 const emit = defineEmits(['order-delivered'])
@@ -17,6 +18,7 @@ const {
 } = useOnTheWayOrders()
 
 onMounted(fetchOrders)
+useAutoRefresh(fetchOrders)
 
 defineExpose({ refresh: fetchOrders })
 
