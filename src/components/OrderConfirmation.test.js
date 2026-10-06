@@ -9,6 +9,7 @@ import { useExclusiveOffersStore } from "../stores/exclusiveOffers";
 import * as ordersService from "../services/orders.service";
 import * as paymentsService from "../services/payments.service";
 import { useLastOrderStore } from "../stores/lastOrder";
+import { useAuthStore } from "../stores/auth";
 
 const routes = [
   { path: "/", name: "carta", component: { template: "<div>Carta</div>" } },
@@ -317,7 +318,7 @@ describe("OrderConfirmation", () => {
       window.location = originalLocation;
     });
 
-    it("creates a Stripe checkout session and redirects to it, without emptying the cart yet", async () => {
+    it.each([null, { email: "customer@example.com", roles: ["ROLE_CUSTOMER"] }])("creates a Stripe checkout session and redirects without emptying the cart, with user %j", async (user) => {
       vi.spyOn(ordersService, "createOrder").mockResolvedValue({
         id: 42,
         paymentStatus: "PENDING_ONLINE_PAYMENT",
@@ -328,6 +329,7 @@ describe("OrderConfirmation", () => {
 
       const { wrapper, cartStore, checkoutStore, router } =
         await mountOrderConfirmation();
+      useAuthStore().user = user;
       cartStore.addProduct({ id: 1, name: "Salmon Roll", price: 10 });
       checkoutStore.setChannel("domicilio");
       checkoutStore.setPaymentMethod("onlineCard");
@@ -349,7 +351,7 @@ describe("OrderConfirmation", () => {
 
       expect(paymentsService.createCheckoutSession).toHaveBeenCalledWith({
         orderId: 42,
-        email: undefined,
+        email: user?.email,
       });
       expect(window.location.href).toBe("https://stripe.test/pay/sess_42");
       // El pago todavía no está confirmado: la cesta se mantiene intacta y

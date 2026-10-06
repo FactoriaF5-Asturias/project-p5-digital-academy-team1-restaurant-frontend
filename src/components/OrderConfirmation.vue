@@ -114,8 +114,7 @@ async function confirmOrder() {
       ...(checkoutStore.channel === "domicilio"
         ? { address: checkoutStore.address }
         : {}),
-      // El backend usa este número de mesa para resolverla, con prioridad
-      // sobre el Device-Identifier (ver OrderService.resolveTable).
+      // En sala se envía el número de mesa que ha detectado o escrito el cliente.
       ...(checkoutStore.channel === "sala" && checkoutStore.tableNumber
         ? { tableNumber: checkoutStore.tableNumber }
         : {}),
@@ -199,7 +198,7 @@ async function confirmOrder() {
       pedido...
     </p>
 
-        <p v-if="needsTableNumber" class="order-confirmation__hint">
+    <p v-if="needsTableNumber" class="order-confirmation__hint">
       Indica tu número de mesa para continuar.
     </p>
 
@@ -243,6 +242,10 @@ async function confirmOrder() {
 
 .order-confirmation__hint {
   @apply text-sm text-on-surface-variant;
+}
+
+.order-confirmation__error {
+  @apply text-sm text-error;
 }
 
 .order-confirmation__success {

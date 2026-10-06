@@ -29,17 +29,31 @@ describe('orders.service', () => {
       paymentMethod: 'CASH_ONSITE',
     })
 
+    expect(api.post).toHaveBeenCalledWith("/api/v1/orders", {
+      items,
+      chefNote: "Sin wasabi",
+      channel: "ONSITE",
+      paymentMethod: "CASH_ONSITE",
+    }, { headers: { 'Device-Identifier': 'device-123' } });
+  });
+
+  it("sends the table number as a number and the device identifier header", async () => {
+    api.post.mockResolvedValue({ data: { id: 1 } });
+
+    await createOrder({
+      items: [],
+      chefNote: "",
+      channel: "sala",
+      paymentMethod: "CARD_ONSITE",
+      tableNumber: "7",
+    });
+
     expect(api.post).toHaveBeenCalledWith(
-      '/api/v1/orders',
-      {
-        items,
-        chefNote: 'Sin wasabi',
-        channel: 'ONSITE',
-        paymentMethod: 'CASH_ONSITE',
-      },
+      "/api/v1/orders",
+      expect.objectContaining({ tableNumber: 7 }),
       { headers: { 'Device-Identifier': 'device-123' } },
-    )
-  })
+    );
+  });
 
   it('translates the "domicilio" channel to the backend "ONLINE" value', async () => {
     api.post.mockResolvedValue({ data: { id: 1 } })
@@ -51,17 +65,13 @@ describe('orders.service', () => {
       paymentMethod: 'ONLINE_CARD',
     })
 
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/v1/orders',
-      {
-        items: [],
-        chefNote: '',
-        channel: 'ONLINE',
-        paymentMethod: 'ONLINE_CARD',
-      },
-      { headers: { 'Device-Identifier': 'device-123' } },
-    )
-  })
+    expect(api.post).toHaveBeenCalledWith("/api/v1/orders", {
+      items: [],
+      chefNote: "",
+      channel: "ONLINE",
+      paymentMethod: "ONLINE_CARD",
+    }, { headers: { 'Device-Identifier': 'device-123' } });
+  });
 
   it('maps the delivery address to the backend contract when provided', async () => {
     api.post.mockResolvedValue({ data: { id: 1 } })
@@ -74,18 +84,14 @@ describe('orders.service', () => {
       address: { street: 'Calle Mayor 1', city: 'Gijón', postalCode: '33001' },
     })
 
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/v1/orders',
-      expect.objectContaining({
-        deliveryAddress: {
-          deliveryStreet: 'Calle Mayor 1',
-          deliveryCity: 'Gijón',
-          deliveryPostalCode: '33001',
-          deliveryInstructions: null,
-        },
-      }),
-      expect.anything(),
-    )
+    expect(api.post).toHaveBeenCalledWith('/api/v1/orders', expect.objectContaining({
+      deliveryAddress: {
+        deliveryStreet: 'Calle Mayor 1',
+        deliveryCity: 'Gijón',
+        deliveryPostalCode: '33001',
+        deliveryInstructions: null,
+      },
+    }), expect.anything())
   })
 
   it('returns the response data as-is', async () => {

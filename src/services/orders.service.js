@@ -25,21 +25,22 @@ function mapAddressToBackend(address) {
 }
 
 export async function createOrder({ items, chefNote, channel, paymentMethod, address, tableNumber }) {
-   const response = await api.post(
-     ORDERS_ENDPOINT,
-     {
-       items,
-       chefNote,
-       channel: CHANNEL_TO_BACKEND[channel] ?? channel,
-       paymentMethod,
-       deliveryAddress: mapAddressToBackend(address), tableNumber,
+  const response = await api.post(
+    ORDERS_ENDPOINT,
+    {
+      items,
+      chefNote,
+      channel: CHANNEL_TO_BACKEND[channel] ?? channel,
+      paymentMethod,
+      deliveryAddress: mapAddressToBackend(address),
+      tableNumber: tableNumber ? Number(tableNumber) : undefined,
     },
     // Cabecera obligatoria para que el backend resuelva la mesa en pedidos
     // "en sala"; en pedidos a domicilio el backend la ignora sin problema.
-     { headers: { 'Device-Identifier': getDeviceIdentifier() } },
-   )
-   return response.data
- }
+    { headers: { 'Device-Identifier': getDeviceIdentifier() } },
+  )
+  return response.data
+}
 
 // Pedidos filtrados por estado (p. ej. 'ONTHEWAY' para el Dashboard de
 // Repartidores). Endpoint genérico, no requiere ningún repartidor asignado.

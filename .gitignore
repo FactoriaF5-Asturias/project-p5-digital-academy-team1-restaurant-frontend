@@ -10,7 +10,6 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-coverage
 *.local
 
 # Editor directories and files
@@ -29,7 +28,10 @@ coverage
 !.env.example
 !.env.e2e.example
 
+# Certificados SSL locales (cada uno genera los suyos con mkcert)
+certs/
+*.pem
+
 # Resultados de Playwright (E2E)
 test-results/
 playwright-report/
-

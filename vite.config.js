@@ -4,8 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
 
-const CERT_KEY_PATH = '../certs/localhost+2-key.pem'
-const CERT_PATH = '../certs/localhost+2.pem'
+const CERT_KEY_PATH = './certs/localhost+2-key.pem'
+const CERT_PATH = './certs/localhost+2.pem'
 
 // Solo activamos HTTPS si los certificados locales existen de verdad
 // (no se suben al repo, así que en CI o en una máquina sin mkcert no estarán).
