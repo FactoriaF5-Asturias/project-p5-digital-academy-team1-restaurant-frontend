@@ -1,10 +1,14 @@
 <script setup>
 import { ref } from 'vue'
 
-// Responsabilidad: campo de contraseña con un botón de ojo para mostrarla
-// u ocultarla. El valor se enlaza con v-model desde el formulario padre.
+defineOptions({
+  inheritAttrs: false,
+})
 
-const password = defineModel({ type: String, default: '' })
+const password = defineModel({
+  type: String,
+  default: '',
+})
 
 defineProps({
   id: {
@@ -31,6 +35,7 @@ function handleToggleVisibility() {
 <template>
   <div class="password-input">
     <input
+      v-bind="$attrs"
       :id="id"
       v-model="password"
       :type="isVisible ? 'text' : 'password'"
