@@ -111,7 +111,10 @@ function selectChannel(channel) {
       }}
     </p>
 
-    <div v-else class="grid gap-4">
+    <div
+      v-else
+      class="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+    >
       <KitchenOrderCard
         v-for="order in orders"
         :key="order.id"
