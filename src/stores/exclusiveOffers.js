@@ -1,52 +1,66 @@
-import { defineStore } from "pinia";
-import { getExclusiveOffers, consumeOffer as requestConsumeOffer } from "../services/offers.service";
+import { defineStore } from 'pinia'
+import {
+  getExclusiveOffers,
+  consumeOffer as requestConsumeOffer,
+} from '../services/offers.service'
 
-export const useExclusiveOffersStore = defineStore("exclusiveOffers", {
+export const useExclusiveOffersStore = defineStore('exclusiveOffers', {
   state: () => ({
     offers: [],
     isLoading: false,
     error: null,
   }),
-  getters: {
-    // El backend no tiene fecha de caducidad: una oferta deja de estar
-    // activa cuando el cliente ya la ha canjeado (used === true).
-    activeOffers: (state) => state.offers.filter((offer) => !offer.used),
 
-    // Devuelve la oferta activa completa de un producto (con su finalPrice
-    // ya calculado por el backend), o null si no tiene ninguna oferta activa.
+  getters: {
+    activeOffers: (state) => {
+      return state.offers.filter((offer) => !offer.used)
+    },
+
     offerForProduct: (state) => (productId) => {
       return (
-        state.offers.find((o) => o.product.id === productId && !o.used) ?? null
-      );
+        state.offers.find(
+          (offer) =>
+            offer.product?.id === productId && !offer.used,
+        ) ?? null
+      )
     },
   },
+
   actions: {
     async fetchOffers() {
-      this.isLoading = true;
-      this.error = null;
+      if (this.isLoading) return
+
+      this.isLoading = true
+      this.error = null
+
       try {
-        this.offers = await getExclusiveOffers();
-      } catch (err) {
-        this.error = "No se han podido cargar tus ofertas exclusivas. Inténtalo de nuevo más tarde.";
-        console.error("[exclusiveOffers] Error al obtener las ofertas:", err);
+        this.offers = await getExclusiveOffers()
+      } catch {
+        this.offers = []
+        this.error =
+          'No se han podido cargar tus ofertas exclusivas. Inténtalo de nuevo más tarde.'
       } finally {
-        this.isLoading = false;
+        this.isLoading = false
       }
     },
 
-    // Marca una oferta como canjeada tras usarla en un pedido confirmado.
-    // No lanza: un fallo al consumir no debe impedir que el pedido, ya
-    // creado con éxito, siga su curso.
     async consumeOffer(coupon) {
       try {
-        const updatedOffer = await requestConsumeOffer(coupon);
-        const index = this.offers.findIndex((o) => o.coupon === coupon);
+        const updatedOffer = await requestConsumeOffer(coupon)
+
+        const index = this.offers.findIndex(
+          (offer) => offer.coupon === coupon,
+        )
+
         if (index !== -1) {
-          this.offers[index] = updatedOffer;
+          this.offers[index] = updatedOffer
         }
-      } catch (err) {
-        console.error("[exclusiveOffers] Error al consumir la oferta:", err);
+      } catch (error) {
+        console.error(
+          '[exclusiveOffers] Error al consumir la oferta:',
+          error,
+        )
       }
     },
   },
-});
+})

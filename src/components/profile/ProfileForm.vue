@@ -1,22 +1,21 @@
 <script setup>
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, ref } from 'vue'
 import { useAuthStore } from '../../stores/auth'
-import { updateProfile } from '../../services/users.service'
 import ProfileFormField from './ProfileFormField.vue'
 import LoadingSpinner from '../LoadingSpinner.vue'
 import { useProfileForm } from './useProfileForm'
 
-const HTTP_CONFLICT = 409
 const SAVE_MESSAGES = Object.freeze({
   success: 'Tus datos se han guardado.',
   conflict: 'Ya existe una cuenta con este email.',
+  invalid: 'Revisa los datos del formulario antes de guardar.',
+  unauthorized: 'No se pudo autorizar el cambio. Comprueba tu sesión.',
   error: 'No se han podido guardar los cambios. Inténtalo de nuevo.',
 })
 
 const authStore = useAuthStore()
 const formElement = ref(null)
 const isSaving = ref(false)
-// Resultado del último guardado: { type: 'success' | 'error', message } o null.
 const saveFeedback = ref(null)
 
 const {
@@ -30,13 +29,35 @@ const {
   validateForm,
 } = useProfileForm(() => authStore.user)
 
+function clearMessages() {
+  saveFeedback.value = null
+}
+
 function handleDictation(field, transcript) {
+  if (isSaving.value) return
+
+  clearMessages()
   form[field] = transcript
   validateField(field)
 }
 
+function handleReset() {
+  if (isSaving.value) return
+
+  resetForm()
+  clearMessages()
+}
+
 async function handleSubmit() {
-  if (authStore.isFetchingUser || !authStore.user) return
+  if (
+    isSaving.value ||
+    authStore.isFetchingUser ||
+    !authStore.user
+  ) {
+    return
+  }
+
+  clearMessages()
 
   if (!validateForm()) {
     await nextTick()
@@ -50,43 +71,46 @@ async function handleSubmit() {
 
   if (!hasChanges.value) return
 
-  await saveProfile()
-}
-
-// Envía los datos sin espacios sobrantes y, si va bien, actualiza el usuario
-// del store: el formulario se recarga solo con los datos guardados.
-async function saveProfile() {
-  isSaving.value = true
-  saveFeedback.value = null
-
   const profile = Object.fromEntries(
-    fields.map(({ name }) => [name, form[name].trim()])
+    fields.map(({ name }) => [name, form[name].trim()]),
   )
 
+  isSaving.value = true
+
   try {
-    const updatedUser = await updateProfile(authStore.user.id, profile)
-    authStore.user = { ...authStore.user, ...updatedUser }
-    saveFeedback.value = { type: 'success', message: SAVE_MESSAGES.success }
-  } catch (err) {
-    const message =
-      err.response?.status === HTTP_CONFLICT ? SAVE_MESSAGES.conflict : SAVE_MESSAGES.error
-    saveFeedback.value = { type: 'error', message }
-    console.error('[ProfileForm] Error al guardar el perfil:', err)
+    await authStore.updateProfile(profile)
+    await nextTick()
+
+    saveFeedback.value = {
+      type: 'success',
+      message: SAVE_MESSAGES.success,
+    }
+  } catch (error) {
+    const status = error.response?.status
+    let message = SAVE_MESSAGES.error
+
+    if (status === 409) {
+      message = SAVE_MESSAGES.conflict
+    } else if (status === 400) {
+      message = SAVE_MESSAGES.invalid
+    } else if (status === 401 || status === 403) {
+      message = SAVE_MESSAGES.unauthorized
+    }
+
+    saveFeedback.value = {
+      type: 'error',
+      message,
+    }
   } finally {
     isSaving.value = false
   }
 }
-
-// Si el usuario vuelve a editar, el mensaje del último guardado ya no aplica.
-watch(hasChanges, (changed) => {
-  if (changed) saveFeedback.value = null
-})
 </script>
 
 <template>
   <section
     class="profile-form"
-    :aria-busy="Boolean(authStore.isFetchingUser)"
+    :aria-busy="Boolean(authStore.isFetchingUser || isSaving)"
   >
     <h2 class="profile-form__title">Datos personales</h2>
 
@@ -108,13 +132,17 @@ watch(hasChanges, (changed) => {
       ref="formElement"
       class="profile-form__fields"
       novalidate
+      @input="clearMessages"
       @submit.prevent="handleSubmit"
     >
       <p class="profile-form__notice">
         Todos los campos son obligatorios.
       </p>
 
-      <div class="profile-form__grid">
+      <fieldset
+        :disabled="isSaving"
+        class="profile-form__grid"
+      >
         <ProfileFormField
           v-for="field in fields"
           :key="field.name"
@@ -124,7 +152,7 @@ watch(hasChanges, (changed) => {
           @blur="validateField(field.name)"
           @transcript="handleDictation(field.name, $event)"
         />
-      </div>
+      </fieldset>
 
       <p
         v-if="hasChanges"
@@ -136,7 +164,10 @@ watch(hasChanges, (changed) => {
 
       <p
         v-if="saveFeedback"
-        :class="['profile-form__feedback', `profile-form__feedback--${saveFeedback.type}`]"
+        :class="[
+          'profile-form__feedback',
+          `profile-form__feedback--${saveFeedback.type}`,
+        ]"
         :role="saveFeedback.type === 'error' ? 'alert' : 'status'"
       >
         {{ saveFeedback.message }}
@@ -148,7 +179,7 @@ watch(hasChanges, (changed) => {
           type="button"
           class="profile-form__reset"
           :disabled="isSaving"
-          @click="resetForm"
+          @click="handleReset"
         >
           Descartar cambios
         </button>
@@ -156,7 +187,7 @@ watch(hasChanges, (changed) => {
         <button
           type="submit"
           class="profile-form__submit"
-          :disabled="!hasChanges || isSaving"
+          :disabled="isSaving || !hasChanges"
         >
           {{ isSaving ? 'Guardando…' : 'Guardar cambios' }}
         </button>
@@ -181,7 +212,7 @@ watch(hasChanges, (changed) => {
 }
 
 .profile-form__grid {
-  @apply grid grid-cols-1 gap-5 sm:grid-cols-2;
+  @apply grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2;
 }
 
 .profile-form__notice {
@@ -211,16 +242,13 @@ watch(hasChanges, (changed) => {
     transition hover:bg-primary hover:text-white;
 }
 
-.profile-form__reset:disabled {
-  @apply cursor-not-allowed opacity-50;
-}
-
 .profile-form__submit {
   @apply rounded-lg bg-primary px-6 py-3
     font-semibold text-white transition cursor-pointer hover:opacity-90;
 }
 
-.profile-form__submit:disabled {
+.profile-form__submit:disabled,
+.profile-form__reset:disabled {
   @apply cursor-not-allowed opacity-50;
 }
 </style>

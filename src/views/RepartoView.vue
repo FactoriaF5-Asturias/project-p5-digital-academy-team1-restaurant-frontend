@@ -1,37 +1,48 @@
 <script setup>
-import { ref } from "vue";
-import DeliveryMetrics from "../components/DeliveryMetrics.vue";
-import PendingDeliveriesList from "../components/PendingDeliveriesList.vue";
-import OnTheWayOrdersList from "../components/OnTheWayOrdersList.vue";
-import DeliveredTodayList from "../components/DeliveredTodayList.vue";
-import { useDeliveryMetrics } from "../composables/useDeliveryMetrics";
+import { ref } from 'vue'
+import DeliveryMetrics from '../components/DeliveryMetrics.vue'
+import PendingDeliveriesList from '../components/PendingDeliveriesList.vue'
+import OnTheWayOrdersList from '../components/OnTheWayOrdersList.vue'
+import DeliveredTodayList from '../components/DeliveredTodayList.vue'
+import { useDeliveryMetrics } from '../composables/useDeliveryMetrics'
 
-const { metrics, isLoading, isRefreshing, error, isEmpty, refresh } =
-  useDeliveryMetrics();
+const {
+  metrics,
+  isLoading,
+  isRefreshing,
+  error,
+  isEmpty,
+  refresh,
+} = useDeliveryMetrics()
 
-const onTheWayOrdersListRef = ref(null);
-const deliveredTodayListRef = ref(null);
+const onTheWayOrdersListRef = ref(null)
+const deliveredTodayListRef = ref(null)
 
 function handleOrderAccepted() {
-  onTheWayOrdersListRef.value?.refresh();
+  refresh()
+  onTheWayOrdersListRef.value?.refresh()
 }
 
 function handleOrderDelivered() {
-  deliveredTodayListRef.value?.refresh();
+  refresh()
+  deliveredTodayListRef.value?.refresh()
 }
 </script>
 
 <template>
-  <main class="delivery-view" :aria-busy="isLoading">
+  <main class="delivery-view" :aria-busy="isLoading || isRefreshing">
     <header>
       <h1 class="delivery-view__title">Resumen de reparto</h1>
+
       <p class="delivery-view__description">
         Vista general de los pedidos del restaurante. Actualización automática
         cada 10 segundos.
       </p>
     </header>
 
-    <p v-if="isLoading" role="status">Cargando datos de reparto…</p>
+    <p v-if="isLoading" role="status">
+      Cargando datos de reparto…
+    </p>
 
     <template v-else>
       <div v-if="error" class="delivery-view__error">

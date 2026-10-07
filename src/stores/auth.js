@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authService } from '../services/authService'
+import { profileService } from '../services/profileService'
 import { useCartStore } from './cart'
 import { useLastOrderStore } from './lastOrder'
 
@@ -16,9 +17,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => user.value !== null)
 
-  
-  // Al entrar o salir cambia la persona que usa el navegador (o la tablet):
-  // no debe ver la cesta ni el último pedido de quien estuvo antes.
   function forgetPreviousVisitor() {
     useCartStore().clearCart()
     useLastOrderStore().clearOrder()
@@ -45,15 +43,30 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = await authService.getCurrentUser()
       role.value = extractRole(user.value)
     } catch {
-      user.value = null
-      role.value = null
+      clearSession()
     } finally {
       isFetchingUser.value = false
     }
   }
 
-  // Olvida el usuario en el front sin llamar al backend
-  // (p. ej. cuando la sesión ha caducado y el refresh falla).
+  async function updateProfile(profile) {
+    const userId = user.value?.id
+
+    if (!userId) {
+      throw new Error('No authenticated user available')
+    }
+
+    const updatedUser = await profileService.updateProfile(
+      userId,
+      profile,
+    )
+
+    user.value = updatedUser
+    role.value = extractRole(updatedUser)
+
+    return updatedUser
+  }
+
   function clearSession() {
     user.value = null
     role.value = null
@@ -76,6 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     login,
     fetchCurrentUser,
+    updateProfile,
     clearSession,
     logout,
   }

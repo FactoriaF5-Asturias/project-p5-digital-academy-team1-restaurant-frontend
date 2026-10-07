@@ -4,60 +4,130 @@ import KitchenMetrics from '../components/KitchenMetrics.vue'
 import KitchenOrderList from '../components/KitchenOrderList.vue'
 import {
   getKitchenOrders,
+  getKitchenChannelCounts,
   getKitchenMetrics,
 } from '../services/kitchen.service'
 import { useAutoRefresh } from '../composables/useAutoRefresh'
 
 const orders = ref([])
 const metrics = ref(null)
+const selectedChannel = ref('ALL')
+const channelCounts = ref(null)
 
 const isLoadingOrders = ref(true)
 const isLoadingMetrics = ref(true)
 
 const ordersError = ref(null)
 const metricsError = ref(null)
+const countsError = ref(null)
 
-// Solo "cargando" la primera vez: al refrescar se mantienen las comandas en pantalla.
-let hasLoadedOrders = false
+let ordersRequestId = 0
+let countsRequestId = 0
+let metricsRequestId = 0
 
-async function loadOrders() {
-  isLoadingOrders.value = !hasLoadedOrders
+async function loadOrders({ silent = false } = {}) {
+  const requestId = ++ordersRequestId
+  const channel = selectedChannel.value
+
+  if (!silent) {
+    isLoadingOrders.value = true
+  }
+
   ordersError.value = null
 
   try {
-    orders.value = await getKitchenOrders()
+    const result = await getKitchenOrders(channel)
+
+    if (requestId !== ordersRequestId) return
+
+    orders.value = result
   } catch {
+    if (requestId !== ordersRequestId) return
+
+    if (!silent) {
+      orders.value = []
+    }
+
     ordersError.value = 'No se han podido cargar las comandas.'
   } finally {
-    isLoadingOrders.value = false
-    hasLoadedOrders = true
+    if (requestId === ordersRequestId) {
+      isLoadingOrders.value = false
+    }
   }
 }
 
-async function loadMetrics() {
-  // Solo "cargando" la primera vez: al refrescar se mantienen las métricas en pantalla.
-  isLoadingMetrics.value = metrics.value === null
+async function loadChannelCounts() {
+  const requestId = ++countsRequestId
+
+  countsError.value = null
+
+  try {
+    const result = await getKitchenChannelCounts()
+
+    if (requestId !== countsRequestId) return
+
+    channelCounts.value = result
+  } catch {
+    if (requestId !== countsRequestId) return
+
+    countsError.value = 'No se han podido cargar los contadores.'
+  }
+}
+
+async function loadMetrics({ silent = false } = {}) {
+  const requestId = ++metricsRequestId
+
+  if (!silent) {
+    isLoadingMetrics.value = true
+  }
+
   metricsError.value = null
 
   try {
-    metrics.value = await getKitchenMetrics()
+    const result = await getKitchenMetrics()
+
+    if (requestId !== metricsRequestId) return
+
+    metrics.value = result
   } catch {
+    if (requestId !== metricsRequestId) return
+
     metricsError.value = 'No se han podido cargar las métricas de cocina.'
   } finally {
-    isLoadingMetrics.value = false
+    if (requestId === metricsRequestId) {
+      isLoadingMetrics.value = false
+    }
   }
+}
+
+function handleChannelChange(channel) {
+  if (
+    !['ALL', 'ONSITE', 'ONLINE'].includes(channel) ||
+    channel === selectedChannel.value
+  ) {
+    return
+  }
+
+  selectedChannel.value = channel
+  loadOrders()
+  loadChannelCounts()
+}
+
+function handleStatusChanged() {
+  return Promise.all([
+    loadOrders({ silent: true }),
+    loadChannelCounts(),
+    loadMetrics({ silent: true }),
+  ])
 }
 
 onMounted(() => {
   loadOrders()
+  loadChannelCounts()
   loadMetrics()
 })
 
-// Las comandas nuevas y los cambios de otros puestos aparecen sin recargar.
-useAutoRefresh(() => {
-  loadOrders()
-  loadMetrics()
-})
+useAutoRefresh(handleStatusChanged)
 </script>
 
 <template>
@@ -69,11 +139,22 @@ useAutoRefresh(() => {
     />
 
     <div class="mt-8">
+      <p
+        v-if="countsError"
+        class="mb-4 text-sm text-error"
+        role="alert"
+      >
+        {{ countsError }}
+      </p>
+
       <KitchenOrderList
         :orders="orders"
         :is-loading="isLoadingOrders"
         :error="ordersError"
-        @status-changed="loadMetrics"
+        :selected-channel="selectedChannel"
+        :channel-counts="channelCounts"
+        @channel-change="handleChannelChange"
+        @status-changed="handleStatusChanged"
       />
     </div>
   </main>
