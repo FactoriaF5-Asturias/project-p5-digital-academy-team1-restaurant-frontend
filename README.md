@@ -152,7 +152,6 @@ Detailed project specifications, architectural decisions, and technical guides c
 * **[API Integration](https://github.com/FactoriaF5-Asturias/project-p5-digital-academy-team1-restaurant-frontend/wiki/API-Integration):** Endpoints consumed by each service and data mappings.
 * **[Testing](https://github.com/FactoriaF5-Asturias/project-p5-digital-academy-team1-restaurant-frontend/wiki/Testing):** Running tests, coverage, CI and testing conventions.
 * **[Git Workflow](https://github.com/FactoriaF5-Asturias/project-p5-digital-academy-team1-restaurant-frontend/wiki/Git-Workflow):** Step-by-step fork, branch, commit and Pull Request process.
-* **[Known Limitations & Roadmap](https://github.com/FactoriaF5-Asturias/project-p5-digital-academy-team1-restaurant-frontend/wiki/Known-Limitations-&-Roadmap):** Postponed features and pending integrations.
 
 
 
@@ -165,14 +164,14 @@ Detailed project specifications, architectural decisions, and technical guides c
   </tr>
   <tr>
     <td>Nieves Durán</td>
-    <td><a href="https://github.com/duran-ni"><img src="docs/assets/github-logo-readme.png" alt="GitHub profile" width="20" height="20"></a> <a href="https://github.com/duran-ni">@duran-ni</a></td>
+    <td><a href="https://github.com/duran-ni">@duran-ni</a></td>
   </tr>
   <tr>
-    <td>Luisa Cortes</td>
-    <td><a href="https://github.com/lcortes89"><img src="docs/assets/github-logo-readme.png" alt="GitHub profile" width="20" height="20"></a> <a href="https://github.com/lcortes89">@lcortes89</a></td>
+    <td>Luisa Cortés</td>
+    <td><a href="https://github.com/lcortes89">@lcortes89</a></td>
   </tr>
   <tr>
     <td>Andrea Pérez</td>
-    <td><a href="https://github.com/andreaperezgon"><img src="docs/assets/github-logo-readme.png" alt="GitHub profile" width="20" height="20"></a> <a href="https://github.com/andreaperezgon">@andreaperezgon</a></td>
+    <td><a href="https://github.com/andreaperezgon">@andreaperezgon</a></td>
   </tr>
 </table>
